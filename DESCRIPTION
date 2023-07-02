@@ -1,0 +1,16 @@
+Package: invent
+Type: Package
+Title: Nonlinear Interactions Varying Coefficient Regression Model (INteractions Varying coefficiENTs)
+Version: 1.0
+Date: 2023-02-10
+Author: Davide Fabbrico and Matteo Pedone
+Maintainer: Who to complain to <davide.fabbrico@unifi.it>
+Description: One paragraph description of what the package does as one or more
+         full sentences.
+License: MIT + file LICENSE
+Encoding: UTF-8
+Imports: Rcpp (>= 1.0.10), mltools, spikeSlabGAM
+LinkingTo: Rcpp, RcppArmadillo
+URL: https://github.com/mattpedone/invent
+BugReports: https://github.com/mattpedone/invent/issues
+RoxygenNote: 7.2.3
