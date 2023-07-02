@@ -28,7 +28,7 @@ You can install the development version of invent from
 
 ``` r
 # install.packages("devtools")
-devtools::install_github("mattpedone/invent")
+devtools::install_github("davidefabbrico/invent")
 ```
 
 ## Usage
