@@ -128,27 +128,34 @@ gendata <- function(n_obs = 200, p = 10, minb = 1.5, maxb = 3.0, error = 0.01, s
     }
   }
   
+  omega_tilde <- matrix(0, nrow = p, ncol = q)
   if (ha == 1) { # weak heredity
+    lastInt <- setdiff(p_vector, innc)
     for (i in innc) {
       innc_perm <- p_vector[p_vector != i]
-      nn_int <- sort(sample(innc_perm, noi, replace = FALSE))
-      for (j in nn_int) {
-        omega_l[i,j] <- rnorm(1, 2, 0.5)*sign(runif(1, -1, 1))
+      if (i == p) {
+        nn_int <- sample(lastInt, 1)
+      } else {
+        nn_int <- sample(innc_perm, 1)
+      }
+      vectorInter <- sort(c(i,nn_int))
+      omega_l[vectorInter[1],vectorInter[2]] <- rnorm(1, 2, 0.5)*sign(runif(1, -1, 1))
+      if (scenario == 2 || scenario == 4) {
+        omega_tilde[vectorInter[1], (cd[vectorInter[2]]+1):(cd[vectorInter[2]+1])] <- rnorm(1, 2, 0.5)*sign(runif(1, -1, 1))
       }
     }
   }
   
-  omega_tilde <- matrix(0, nrow = p, ncol = q)
   if (ha == 0) {
     cov1 <- sort(sample(1:p, noi, replace = FALSE))
     chCov2 <- setdiff(1:p, cov1)
-    # if (length(chCov2) < noi) {
-    #   print("Watch out for the number of non-zero interactions!")
-    # }
     cov2 <- sort(sample(chCov2, noi, replace = TRUE))
     for (i in 1:noi) {
       first <- cov1[i]
       second <- cov2[i]
+      vectorInter <- sort(c(first, second))
+      first <- vectorInter[1]
+      second <- vectorInter[2]
       omega_l[first, second] <- rnorm(1, 2, 0.5)*sign(runif(1, -1, 1))
       if (scenario == 2 || scenario == 4) {
         omega_tilde[first, (cd[second]+1):(cd[second+1])] <- rnorm(1, 2, 0.5)*sign(runif(1, -1, 1))
@@ -156,23 +163,13 @@ gendata <- function(n_obs = 200, p = 10, minb = 1.5, maxb = 3.0, error = 0.01, s
     }
   }
   
-  if (scenario == 4) {
+  if (scenario == 4 || scenario == 2) {
     if (ha == 2) {
       for (i in 1:(p-1)) {
         for (j in (i+1):p) {
           if ((alpha_0_tilde[1,i] != 0) & (alpha_0_tilde[1,j] != 0)) {
             omega_tilde[i, (cd[j]+1):(cd[j+1])] <- alpha_0_tilde[1,i]*alpha_0_tilde[1,j]
           }
-        }
-      }
-    }
-    if (ha == 1) {
-      for (i in innc) {
-        # stesse interazioni non nulle di quelle lineari
-        # innc_perm <- p_vector[p_vector != i]
-        # nn_int <- sort(sample(innc_perm, noi, replace = FALSE))
-        for (j in nn_int) {
-          omega_tilde[i, (cd[j]+1):(cd[j+1])] <- rnorm(1, 2, 0.5)*sign(runif(1, -1, 1))
         }
       }
     }
