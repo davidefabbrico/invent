@@ -295,11 +295,7 @@ List bodyMCMC(arma::vec y, int p, int nobs, arma::vec cd, arma::vec d, arma::mat
   // gamma 0 linear (vector of dimension p)
   arma::vec gamma_0_l(p);
   for (int j = 0; j<p; j++) {
-    // int randNumber = round(R::runif(0,1));
     gamma_0_l(j) = hyperpar(4);
-    // if (randNumber == 0) {
-    //   gamma_0_l(j) = randNumber;
-    // }
   }
   // gamma non linear (vector of dimension p)
   arma::vec gamma_0_nl = gamma_0_l;
@@ -516,8 +512,6 @@ List bodyMCMC(arma::vec y, int p, int nobs, arma::vec cd, arma::vec d, arma::mat
     // update pi start non linear
     pi_star_nl = update_piSC(hyperpar(7), hyperpar(8), gamma_star_nl, hyperpar(4));
     //////////////////// effect modifiers linear peNMIG ////////////////////
-    arma::mat alpha_l_tmp = alpha_l;
-    arma::mat beta_l_tmp = beta_l;
     for (int j = 0; j<(p-1); j++) {
       for (int k = (j+1); k<p; k++) {
         if (ha == 1) {
@@ -531,46 +525,53 @@ List bodyMCMC(arma::vec y, int p, int nobs, arma::vec cd, arma::vec d, arma::mat
             alpha_star_bar = alpha_star_l(j,k) + R::rnorm(0, mht(0));
             // compute the new beta_l (temp element)
             omega_l_tmp = xi_star_l(j,k) * alpha_star_bar;
+            arma::mat alpha_l_tmp = alpha_l;
             alpha_l_tmp.col(j) = alpha_l.col(j) - X_l.col(k)*omega_l(j, k) + X_l.col(k)*omega_l_tmp;
+            beta_l_tmp = beta_l;
             beta_l_tmp.col(j) = xi_l(j) * alpha_l_tmp.col(j);
             // new linear predictor WITH the proposed alpha star
-            arma::vec eta_pl_tmp = eta_pl - X_l.col(j)%beta_l.col(j) + X_l.col(j)%beta_l_tmp.col(j);
+            eta_pl_tmp = compLinPred(nobs, p, cd, eta0, X_l, beta_l_tmp, X_nl, beta_nl);
             // update linear alpha star
             // List
             List uasl = update_alphaC(y, sigma, tau_star_l(j,k), gamma_star_l(j,k), eta_pl_tmp, eta_pl, alpha_star_bar, alpha_star_l(j,k));
             alpha_star_l(j,k) = uasl[0];
             int alpha_acc = uasl[1];
             alpha_star_l_acc(j,k) = alpha_star_l_acc(j,k) + alpha_acc;
+            // compute linear omega
             omega_l(j, k) = xi_star_l(j,k) * alpha_star_l(j, k);
-            // update m_star_l linear
-            m_star_l(j,k) = update_mCsca(xi_star_l(j,k));
             alpha_l.col(j) = alpha_0_l(j)*vecOnes;
             for (int kn = (j+1); kn<p; kn++) {
               alpha_l.col(j) = alpha_l.col(j) + X_l.col(kn)*omega_l(j, kn);
             }
+            // compute linear beta
             beta_l.col(j) = xi_l(j) * alpha_l.col(j);
+            // Linear Predictor with the proposed alpha
+            // update m_star_l linear
+            m_star_l(j,k) = update_mCsca(xi_star_l(j,k));
             // update xi star linear
             // proposed xi star
             xi_star_bar = xi_star_l(j,k) + R::rnorm(0, mht(1));
             // compute the new beta_l (temp element)
-            omega_l_tmp =  alpha_star_l(j,k) * xi_star_bar;
+            omega_l_tmp = xi_star_bar * alpha_star_l(j,k);
+            alpha_l_tmp = alpha_l;
             alpha_l_tmp.col(j) = alpha_l.col(j) - X_l.col(k)*omega_l(j, k) + X_l.col(k)*omega_l_tmp;
+            beta_l_tmp = beta_l;
             beta_l_tmp.col(j) = xi_l(j) * alpha_l_tmp.col(j);
             // Linear Predictor with the proposed xi star
-            eta_pl = compLinPred(nobs, p, cd, eta0, X_l, beta_l, X_nl, beta_nl);
-            eta_pl_tmp = eta_pl - X_l.col(j)%beta_l.col(j) + X_l.col(j)%beta_l_tmp.col(j);
+            eta_pl_tmp = compLinPred(nobs, p, cd, eta0, X_l, beta_l_tmp, X_nl, beta_nl);
             // update xi linear star
             List uxsl = update_xiLC(y, eta_pl_tmp, eta_pl, sigma, m_star_l(j,k), xi_star_bar, xi_star_l(j,k));
             xi_star_l(j,k) = uxsl[0];
             int xiSacc = uxsl[1];
             xi_star_l_acc(j,k) = xi_star_l_acc(j,k) + xiSacc;
-            // compute linear predictor
-            omega_l(j,k) =  alpha_star_l(j,k) * xi_star_l(j,k);
+            omega_l(j, k) = xi_star_l(j,k) * alpha_star_l(j, k);
             alpha_l.col(j) = alpha_0_l(j)*vecOnes;
             for (int kn = (j+1); kn<p; kn++) {
               alpha_l.col(j) = alpha_l.col(j) + X_l.col(kn)*omega_l(j, kn);
             }
-            beta_l.col(j) = xi_l(j) * alpha_l.col(j);
+            // compute linear beta
+            beta_l.col(j) = alpha_l.col(j)*xi_l(j);
+            eta_pl = compLinPred(nobs, p, cd, eta0, X_l, beta_l, X_nl, beta_nl);
           }
         }
         
@@ -585,46 +586,53 @@ List bodyMCMC(arma::vec y, int p, int nobs, arma::vec cd, arma::vec d, arma::mat
             alpha_star_bar = alpha_star_l(j,k) + R::rnorm(0, mht(0));
             // compute the new beta_l (temp element)
             omega_l_tmp = xi_star_l(j,k) * alpha_star_bar;
+            arma::mat alpha_l_tmp = alpha_l;
             alpha_l_tmp.col(j) = alpha_l.col(j) - X_l.col(k)*omega_l(j, k) + X_l.col(k)*omega_l_tmp;
+            beta_l_tmp = beta_l;
             beta_l_tmp.col(j) = xi_l(j) * alpha_l_tmp.col(j);
             // new linear predictor WITH the proposed alpha star
-            arma::vec eta_pl_tmp = eta_pl - X_l.col(j)%beta_l.col(j) + X_l.col(j)%beta_l_tmp.col(j);
+            eta_pl_tmp = compLinPred(nobs, p, cd, eta0, X_l, beta_l_tmp, X_nl, beta_nl);
             // update linear alpha star
             // List
             List uasl = update_alphaC(y, sigma, tau_star_l(j,k), gamma_star_l(j,k), eta_pl_tmp, eta_pl, alpha_star_bar, alpha_star_l(j,k));
             alpha_star_l(j,k) = uasl[0];
             int alpha_acc = uasl[1];
             alpha_star_l_acc(j,k) = alpha_star_l_acc(j,k) + alpha_acc;
+            // compute linear omega
             omega_l(j, k) = xi_star_l(j,k) * alpha_star_l(j, k);
-            // update m_star_l linear
-            m_star_l(j,k) = update_mCsca(xi_star_l(j,k));
             alpha_l.col(j) = alpha_0_l(j)*vecOnes;
             for (int kn = (j+1); kn<p; kn++) {
               alpha_l.col(j) = alpha_l.col(j) + X_l.col(kn)*omega_l(j, kn);
             }
+            // compute linear beta
             beta_l.col(j) = xi_l(j) * alpha_l.col(j);
+            // Linear Predictor with the proposed alpha
+            // update m_star_l linear
+            m_star_l(j,k) = update_mCsca(xi_star_l(j,k));
             // update xi star linear
             // proposed xi star
             xi_star_bar = xi_star_l(j,k) + R::rnorm(0, mht(1));
             // compute the new beta_l (temp element)
-            omega_l_tmp =  alpha_star_l(j,k) * xi_star_bar;
+            omega_l_tmp = xi_star_bar * alpha_star_l(j,k);
+            alpha_l_tmp = alpha_l;
             alpha_l_tmp.col(j) = alpha_l.col(j) - X_l.col(k)*omega_l(j, k) + X_l.col(k)*omega_l_tmp;
+            beta_l_tmp = beta_l;
             beta_l_tmp.col(j) = xi_l(j) * alpha_l_tmp.col(j);
             // Linear Predictor with the proposed xi star
-            eta_pl = compLinPred(nobs, p, cd, eta0, X_l, beta_l, X_nl, beta_nl);
-            eta_pl_tmp = eta_pl - X_l.col(j)%beta_l.col(j) + X_l.col(j)%beta_l_tmp.col(j);
+            eta_pl_tmp = compLinPred(nobs, p, cd, eta0, X_l, beta_l_tmp, X_nl, beta_nl);
             // update xi linear star
             List uxsl = update_xiLC(y, eta_pl_tmp, eta_pl, sigma, m_star_l(j,k), xi_star_bar, xi_star_l(j,k));
             xi_star_l(j,k) = uxsl[0];
             int xiSacc = uxsl[1];
             xi_star_l_acc(j,k) = xi_star_l_acc(j,k) + xiSacc;
-            // compute linear predictor
-            omega_l(j,k) =  alpha_star_l(j,k) * xi_star_l(j,k);
+            omega_l(j, k) = xi_star_l(j,k) * alpha_star_l(j, k);
             alpha_l.col(j) = alpha_0_l(j)*vecOnes;
             for (int kn = (j+1); kn<p; kn++) {
               alpha_l.col(j) = alpha_l.col(j) + X_l.col(kn)*omega_l(j, kn);
             }
-            beta_l.col(j) = xi_l(j) * alpha_l.col(j);
+            // compute linear beta
+            beta_l.col(j) = alpha_l.col(j)*xi_l(j);
+            eta_pl = compLinPred(nobs, p, cd, eta0, X_l, beta_l, X_nl, beta_nl);
           }
         }
         
@@ -638,53 +646,59 @@ List bodyMCMC(arma::vec y, int p, int nobs, arma::vec cd, arma::vec d, arma::mat
           alpha_star_bar = alpha_star_l(j,k) + R::rnorm(0, mht(0));
           // compute the new beta_l (temp element)
           omega_l_tmp = xi_star_l(j,k) * alpha_star_bar;
+          arma::mat alpha_l_tmp = alpha_l;
           alpha_l_tmp.col(j) = alpha_l.col(j) - X_l.col(k)*omega_l(j, k) + X_l.col(k)*omega_l_tmp;
+          beta_l_tmp = beta_l;
           beta_l_tmp.col(j) = xi_l(j) * alpha_l_tmp.col(j);
           // new linear predictor WITH the proposed alpha star
-          arma::vec eta_pl_tmp = eta_pl - X_l.col(j)%beta_l.col(j) + X_l.col(j)%beta_l_tmp.col(j);
+          eta_pl_tmp = compLinPred(nobs, p, cd, eta0, X_l, beta_l_tmp, X_nl, beta_nl);
           // update linear alpha star
           // List
           List uasl = update_alphaC(y, sigma, tau_star_l(j,k), gamma_star_l(j,k), eta_pl_tmp, eta_pl, alpha_star_bar, alpha_star_l(j,k));
           alpha_star_l(j,k) = uasl[0];
           int alpha_acc = uasl[1];
           alpha_star_l_acc(j,k) = alpha_star_l_acc(j,k) + alpha_acc;
+          // compute linear omega
           omega_l(j, k) = xi_star_l(j,k) * alpha_star_l(j, k);
-          // update m_star_l linear
-          m_star_l(j,k) = update_mCsca(xi_star_l(j,k));
           alpha_l.col(j) = alpha_0_l(j)*vecOnes;
           for (int kn = (j+1); kn<p; kn++) {
             alpha_l.col(j) = alpha_l.col(j) + X_l.col(kn)*omega_l(j, kn);
           }
+          // compute linear beta
           beta_l.col(j) = xi_l(j) * alpha_l.col(j);
+          // Linear Predictor with the proposed alpha
+          // update m_star_l linear
+          m_star_l(j,k) = update_mCsca(xi_star_l(j,k));
           // update xi star linear
           // proposed xi star
           xi_star_bar = xi_star_l(j,k) + R::rnorm(0, mht(1));
           // compute the new beta_l (temp element)
-          omega_l_tmp =  alpha_star_l(j,k) * xi_star_bar;
+          omega_l_tmp = xi_star_bar * alpha_star_l(j,k);
+          alpha_l_tmp = alpha_l;
           alpha_l_tmp.col(j) = alpha_l.col(j) - X_l.col(k)*omega_l(j, k) + X_l.col(k)*omega_l_tmp;
+          beta_l_tmp = beta_l;
           beta_l_tmp.col(j) = xi_l(j) * alpha_l_tmp.col(j);
           // Linear Predictor with the proposed xi star
-          eta_pl = compLinPred(nobs, p, cd, eta0, X_l, beta_l, X_nl, beta_nl);
-          eta_pl_tmp = eta_pl - X_l.col(j)%beta_l.col(j) + X_l.col(j)%beta_l_tmp.col(j);
+          eta_pl_tmp = compLinPred(nobs, p, cd, eta0, X_l, beta_l_tmp, X_nl, beta_nl);
+          
           // update xi linear star
           List uxsl = update_xiLC(y, eta_pl_tmp, eta_pl, sigma, m_star_l(j,k), xi_star_bar, xi_star_l(j,k));
           xi_star_l(j,k) = uxsl[0];
           int xiSacc = uxsl[1];
           xi_star_l_acc(j,k) = xi_star_l_acc(j,k) + xiSacc;
-          // compute linear predictor
-          omega_l(j,k) =  alpha_star_l(j,k) * xi_star_l(j,k);
+          omega_l(j, k) = xi_star_l(j,k) * alpha_star_l(j, k);
           alpha_l.col(j) = alpha_0_l(j)*vecOnes;
           for (int kn = (j+1); kn<p; kn++) {
             alpha_l.col(j) = alpha_l.col(j) + X_l.col(kn)*omega_l(j, kn);
           }
-          beta_l.col(j) = xi_l(j) * alpha_l.col(j);
+          // compute linear beta
+          beta_l.col(j) = alpha_l.col(j)*xi_l(j);
+          eta_pl = compLinPred(nobs, p, cd, eta0, X_l, beta_l, X_nl, beta_nl);
         }
       } // end linear k
     } // end linear j
-    eta_pl = compLinPred(nobs, p, cd, eta0, X_l, beta_l, X_nl, beta_nl);
+    
     //////////////////// effect modifiers non-linear peNMIG ////////////////////
-    beta_nl_tmp = beta_nl;
-    alpha_nl_tmp = alpha_nl;
     for (int j = 0; j<(p-1); j++) {
       for (int k = (j+1); k<p; k++) {
         if (ha == 1) {
@@ -697,48 +711,48 @@ List bodyMCMC(arma::vec y, int p, int nobs, arma::vec cd, arma::vec d, arma::mat
             // proposed alpha
             alpha_star_bar = alpha_star_nl(j,k) + R::rnorm(0, mht(2));
             omega_nl_tmp = xi_star_nl(j, span(cd[k], cd[k+1]-1)) * alpha_star_bar;
+            alpha_nl_tmp = alpha_nl;
             alpha_nl_tmp.col(j) = alpha_nl.col(j) - X_nl.cols(span(cd[k], cd[k+1]-1))*omega_nl(j, span(cd[k], cd[k+1]-1)).t() + X_nl.cols(span(cd[k], cd[k+1]-1))*omega_nl_tmp.t();
             // compute the beta non linear temp
+            beta_nl_tmp = beta_nl;
             beta_nl_tmp.cols(span(cd[j], cd[j+1]-1)) =  alpha_nl_tmp.col(j)*xi_nl(span(cd[j], cd[j+1]-1)).t();
             // new linear predictor WITH the proposed alpha star
-            eta_pl = compLinPred(nobs, p, cd, eta0, X_l, beta_l, X_nl, beta_nl);
-            eta_pl_tmp = eta_pl - arma::sum(X_nl.cols(span(cd[j], cd[j+1]-1))%beta_nl.cols(span(cd[j], cd[j+1]-1)), 1) + arma::sum(X_nl.cols(span(cd[j], cd[j+1]-1))%beta_nl_tmp.cols(span(cd[j], cd[j+1]-1)), 1);
+            eta_pl_tmp = compLinPred(nobs, p, cd, eta0, X_l, beta_l, X_nl, beta_nl_tmp);
             // update alpha star non linear
             List uasnl = update_alphaC(y, sigma, tau_star_nl(j,k), gamma_star_nl(j,k), eta_pl_tmp, eta_pl, alpha_star_bar, alpha_star_nl(j,k));
             alpha_star_nl(j,k) = uasnl[0];
             int acc_anl = uasnl[1];
             alpha_star_nl_acc(j,k) = alpha_star_nl_acc(j,k) + acc_anl;
             omega_nl(j, span(cd[k], cd[k+1]-1)) = xi_star_nl(j, span(cd[k], cd[k+1]-1))*alpha_star_nl(j,k);
-            // update m star non linear vector
-            m_star_nl(j, span(cd[k], cd[k+1]-1)) = update_mCvec(xi_star_nl(j, span(cd[k], cd[k+1]-1))).t();
             alpha_nl.col(j) = alpha_0_nl(j)*vecOnes;
             for (int kn = (j+1); kn<p; kn++) {
-              arma::vec col_ind = myRange(cd[kn], cd[kn+1]-1);
-              arma::uvec ucol_ind = arma::conv_to<arma::uvec>::from(col_ind);
-              alpha_nl.col(j) = alpha_nl.col(j) + X_nl.cols(ucol_ind)*omega_nl(j, span(cd[kn], cd[kn+1]-1)).t();
+              alpha_nl.col(j) = alpha_nl.col(j) + X_nl.cols(span(cd[kn], cd[kn+1]-1))*omega_nl(j, span(cd[kn], cd[kn+1]-1)).t();
             }
             beta_nl.cols(span(cd[j], cd[j+1]-1)) = alpha_nl.col(j)*xi_nl(span(cd[j], cd[j+1]-1)).t();
+            // update m star non linear vector
+            m_star_nl(j, span(cd[k], cd[k+1]-1)) = update_mCvec(xi_star_nl(j, span(cd[k], cd[k+1]-1))).t();
             // update xi star non linear
             // proposed xi star non linear
             xi_star_bar_nl = xi_star_nl(j, span(cd[k], cd[k+1]-1)) + R::rnorm(0, mht(3));
             // compute the new beta 
             omega_nl_tmp = xi_star_bar_nl * alpha_star_nl(j,k);
+            alpha_nl_tmp = alpha_nl;
             alpha_nl_tmp.col(j) = alpha_nl.col(j) - X_nl.cols(span(cd[k], cd[k+1]-1))*omega_nl(j, span(cd[k], cd[k+1]-1)).t() + X_nl.cols(span(cd[k], cd[k+1]-1))*omega_nl_tmp.t();
+            beta_nl_tmp = beta_nl;
             beta_nl_tmp.cols(span(cd[j], cd[j+1]-1)) = alpha_nl_tmp.col(j)*xi_nl(span(cd[j], cd[j+1]-1)).t();
-            eta_pl = compLinPred(nobs, p, cd, eta0, X_l, beta_l, X_nl, beta_nl);
-            eta_pl_tmp = eta_pl - arma::sum(X_nl.cols(span(cd[j], cd[j+1]-1))%beta_nl.cols(span(cd[j], cd[j+1]-1)), 1) + arma::sum(X_nl.cols(span(cd[j], cd[j+1]-1))%beta_nl_tmp.cols(span(cd[j], cd[j+1]-1)), 1);
+            eta_pl_tmp = compLinPred(nobs, p, cd, eta0, X_l, beta_l, X_nl, beta_nl_tmp);
             List uxsnl = update_xiNLC(y, eta_pl_tmp, eta_pl, sigma, m_star_nl(j, span(cd[k], cd[k+1]-1)).t(), xi_star_bar_nl.t(), xi_star_nl(j, span(cd[k], cd[k+1]-1)).t());
             arma::rowvec resultXiSnl = uxsnl[0];
             xi_star_nl(j, span(cd[k], cd[k+1]-1)) = resultXiSnl;
             arma::rowvec accxisnl = uxsnl[1];
             xi_star_nl_acc(j, span(cd[k], cd[k+1]-1)) = xi_star_nl_acc(j, span(cd[k], cd[k+1]-1)) + accxisnl;
+            omega_nl(j, span(cd[k], cd[k+1]-1)) = xi_star_nl(j, span(cd[k], cd[k+1]-1))*alpha_star_nl(j,k);
             alpha_nl.col(j) = alpha_0_nl(j)*vecOnes;
             for (int kn = (j+1); kn<p; kn++) {
-              arma::vec col_ind = myRange(cd[kn], cd[kn+1]-1);
-              arma::uvec ucol_ind = arma::conv_to<arma::uvec>::from(col_ind);
-              alpha_nl.col(j) = alpha_nl.col(j) + X_nl.cols(ucol_ind)*omega_nl(j, span(cd[kn], cd[kn+1]-1)).t();
+              alpha_nl.col(j) = alpha_nl.col(j) + X_nl.cols(span(cd[kn], cd[kn+1]-1))*omega_nl(j, span(cd[kn], cd[kn+1]-1)).t();
             }
             beta_nl.cols(span(cd[j], cd[j+1]-1)) = alpha_nl.col(j)*xi_nl(span(cd[j], cd[j+1]-1)).t();
+            eta_pl = compLinPred(nobs, p, cd, eta0, X_l, beta_l, X_nl, beta_nl);
           }
         }
         
@@ -752,48 +766,48 @@ List bodyMCMC(arma::vec y, int p, int nobs, arma::vec cd, arma::vec d, arma::mat
             // proposed alpha
             alpha_star_bar = alpha_star_nl(j,k) + R::rnorm(0, mht(2));
             omega_nl_tmp = xi_star_nl(j, span(cd[k], cd[k+1]-1)) * alpha_star_bar;
+            alpha_nl_tmp = alpha_nl;
             alpha_nl_tmp.col(j) = alpha_nl.col(j) - X_nl.cols(span(cd[k], cd[k+1]-1))*omega_nl(j, span(cd[k], cd[k+1]-1)).t() + X_nl.cols(span(cd[k], cd[k+1]-1))*omega_nl_tmp.t();
             // compute the beta non linear temp
+            beta_nl_tmp = beta_nl;
             beta_nl_tmp.cols(span(cd[j], cd[j+1]-1)) =  alpha_nl_tmp.col(j)*xi_nl(span(cd[j], cd[j+1]-1)).t();
             // new linear predictor WITH the proposed alpha star
-            eta_pl = compLinPred(nobs, p, cd, eta0, X_l, beta_l, X_nl, beta_nl);
-            eta_pl_tmp = eta_pl - arma::sum(X_nl.cols(span(cd[j], cd[j+1]-1))%beta_nl.cols(span(cd[j], cd[j+1]-1)), 1) + arma::sum(X_nl.cols(span(cd[j], cd[j+1]-1))%beta_nl_tmp.cols(span(cd[j], cd[j+1]-1)), 1);
+            eta_pl_tmp = compLinPred(nobs, p, cd, eta0, X_l, beta_l, X_nl, beta_nl_tmp);
             // update alpha star non linear
             List uasnl = update_alphaC(y, sigma, tau_star_nl(j,k), gamma_star_nl(j,k), eta_pl_tmp, eta_pl, alpha_star_bar, alpha_star_nl(j,k));
             alpha_star_nl(j,k) = uasnl[0];
             int acc_anl = uasnl[1];
             alpha_star_nl_acc(j,k) = alpha_star_nl_acc(j,k) + acc_anl;
             omega_nl(j, span(cd[k], cd[k+1]-1)) = xi_star_nl(j, span(cd[k], cd[k+1]-1))*alpha_star_nl(j,k);
-            // update m star non linear vector
-            m_star_nl(j, span(cd[k], cd[k+1]-1)) = update_mCvec(xi_star_nl(j, span(cd[k], cd[k+1]-1))).t();
             alpha_nl.col(j) = alpha_0_nl(j)*vecOnes;
             for (int kn = (j+1); kn<p; kn++) {
-              arma::vec col_ind = myRange(cd[kn], cd[kn+1]-1);
-              arma::uvec ucol_ind = arma::conv_to<arma::uvec>::from(col_ind);
-              alpha_nl.col(j) = alpha_nl.col(j) + X_nl.cols(ucol_ind)*omega_nl(j, span(cd[kn], cd[kn+1]-1)).t();
+              alpha_nl.col(j) = alpha_nl.col(j) + X_nl.cols(span(cd[kn], cd[kn+1]-1))*omega_nl(j, span(cd[kn], cd[kn+1]-1)).t();
             }
             beta_nl.cols(span(cd[j], cd[j+1]-1)) = alpha_nl.col(j)*xi_nl(span(cd[j], cd[j+1]-1)).t();
+            // update m star non linear vector
+            m_star_nl(j, span(cd[k], cd[k+1]-1)) = update_mCvec(xi_star_nl(j, span(cd[k], cd[k+1]-1))).t();
             // update xi star non linear
             // proposed xi star non linear
             xi_star_bar_nl = xi_star_nl(j, span(cd[k], cd[k+1]-1)) + R::rnorm(0, mht(3));
             // compute the new beta 
             omega_nl_tmp = xi_star_bar_nl * alpha_star_nl(j,k);
+            alpha_nl_tmp = alpha_nl;
             alpha_nl_tmp.col(j) = alpha_nl.col(j) - X_nl.cols(span(cd[k], cd[k+1]-1))*omega_nl(j, span(cd[k], cd[k+1]-1)).t() + X_nl.cols(span(cd[k], cd[k+1]-1))*omega_nl_tmp.t();
+            beta_nl_tmp = beta_nl;
             beta_nl_tmp.cols(span(cd[j], cd[j+1]-1)) = alpha_nl_tmp.col(j)*xi_nl(span(cd[j], cd[j+1]-1)).t();
-            eta_pl = compLinPred(nobs, p, cd, eta0, X_l, beta_l, X_nl, beta_nl);
-            eta_pl_tmp = eta_pl - arma::sum(X_nl.cols(span(cd[j], cd[j+1]-1))%beta_nl.cols(span(cd[j], cd[j+1]-1)), 1) + arma::sum(X_nl.cols(span(cd[j], cd[j+1]-1))%beta_nl_tmp.cols(span(cd[j], cd[j+1]-1)), 1);
+            eta_pl_tmp = compLinPred(nobs, p, cd, eta0, X_l, beta_l, X_nl, beta_nl_tmp);
             List uxsnl = update_xiNLC(y, eta_pl_tmp, eta_pl, sigma, m_star_nl(j, span(cd[k], cd[k+1]-1)).t(), xi_star_bar_nl.t(), xi_star_nl(j, span(cd[k], cd[k+1]-1)).t());
             arma::rowvec resultXiSnl = uxsnl[0];
             xi_star_nl(j, span(cd[k], cd[k+1]-1)) = resultXiSnl;
             arma::rowvec accxisnl = uxsnl[1];
             xi_star_nl_acc(j, span(cd[k], cd[k+1]-1)) = xi_star_nl_acc(j, span(cd[k], cd[k+1]-1)) + accxisnl;
+            omega_nl(j, span(cd[k], cd[k+1]-1)) = xi_star_nl(j, span(cd[k], cd[k+1]-1))*alpha_star_nl(j,k);
             alpha_nl.col(j) = alpha_0_nl(j)*vecOnes;
             for (int kn = (j+1); kn<p; kn++) {
-              arma::vec col_ind = myRange(cd[kn], cd[kn+1]-1);
-              arma::uvec ucol_ind = arma::conv_to<arma::uvec>::from(col_ind);
-              alpha_nl.col(j) = alpha_nl.col(j) + X_nl.cols(ucol_ind)*omega_nl(j, span(cd[kn], cd[kn+1]-1)).t();
+              alpha_nl.col(j) = alpha_nl.col(j) + X_nl.cols(span(cd[kn], cd[kn+1]-1))*omega_nl(j, span(cd[kn], cd[kn+1]-1)).t();
             }
             beta_nl.cols(span(cd[j], cd[j+1]-1)) = alpha_nl.col(j)*xi_nl(span(cd[j], cd[j+1]-1)).t();
+            eta_pl = compLinPred(nobs, p, cd, eta0, X_l, beta_l, X_nl, beta_nl);
           }
         }
         
@@ -806,48 +820,48 @@ List bodyMCMC(arma::vec y, int p, int nobs, arma::vec cd, arma::vec d, arma::mat
           // proposed alpha
           alpha_star_bar = alpha_star_nl(j,k) + R::rnorm(0, mht(2));
           omega_nl_tmp = xi_star_nl(j, span(cd[k], cd[k+1]-1)) * alpha_star_bar;
+          alpha_nl_tmp = alpha_nl;
           alpha_nl_tmp.col(j) = alpha_nl.col(j) - X_nl.cols(span(cd[k], cd[k+1]-1))*omega_nl(j, span(cd[k], cd[k+1]-1)).t() + X_nl.cols(span(cd[k], cd[k+1]-1))*omega_nl_tmp.t();
           // compute the beta non linear temp
+          beta_nl_tmp = beta_nl;
           beta_nl_tmp.cols(span(cd[j], cd[j+1]-1)) =  alpha_nl_tmp.col(j)*xi_nl(span(cd[j], cd[j+1]-1)).t();
           // new linear predictor WITH the proposed alpha star
-          eta_pl = compLinPred(nobs, p, cd, eta0, X_l, beta_l, X_nl, beta_nl);
-          eta_pl_tmp = eta_pl - arma::sum(X_nl.cols(span(cd[j], cd[j+1]-1))%beta_nl.cols(span(cd[j], cd[j+1]-1)), 1) + arma::sum(X_nl.cols(span(cd[j], cd[j+1]-1))%beta_nl_tmp.cols(span(cd[j], cd[j+1]-1)), 1);
+          eta_pl_tmp = compLinPred(nobs, p, cd, eta0, X_l, beta_l, X_nl, beta_nl_tmp);
           // update alpha star non linear
           List uasnl = update_alphaC(y, sigma, tau_star_nl(j,k), gamma_star_nl(j,k), eta_pl_tmp, eta_pl, alpha_star_bar, alpha_star_nl(j,k));
           alpha_star_nl(j,k) = uasnl[0];
           int acc_anl = uasnl[1];
           alpha_star_nl_acc(j,k) = alpha_star_nl_acc(j,k) + acc_anl;
           omega_nl(j, span(cd[k], cd[k+1]-1)) = xi_star_nl(j, span(cd[k], cd[k+1]-1))*alpha_star_nl(j,k);
-          // update m star non linear vector
-          m_star_nl(j, span(cd[k], cd[k+1]-1)) = update_mCvec(xi_star_nl(j, span(cd[k], cd[k+1]-1))).t();
           alpha_nl.col(j) = alpha_0_nl(j)*vecOnes;
           for (int kn = (j+1); kn<p; kn++) {
-            arma::vec col_ind = myRange(cd[kn], cd[kn+1]-1);
-            arma::uvec ucol_ind = arma::conv_to<arma::uvec>::from(col_ind);
-            alpha_nl.col(j) = alpha_nl.col(j) + X_nl.cols(ucol_ind)*omega_nl(j, span(cd[kn], cd[kn+1]-1)).t();
+            alpha_nl.col(j) = alpha_nl.col(j) + X_nl.cols(span(cd[kn], cd[kn+1]-1))*omega_nl(j, span(cd[kn], cd[kn+1]-1)).t();
           }
           beta_nl.cols(span(cd[j], cd[j+1]-1)) = alpha_nl.col(j)*xi_nl(span(cd[j], cd[j+1]-1)).t();
+          // update m star non linear vector
+          m_star_nl(j, span(cd[k], cd[k+1]-1)) = update_mCvec(xi_star_nl(j, span(cd[k], cd[k+1]-1))).t();
           // update xi star non linear
           // proposed xi star non linear
           xi_star_bar_nl = xi_star_nl(j, span(cd[k], cd[k+1]-1)) + R::rnorm(0, mht(3));
           // compute the new beta 
           omega_nl_tmp = xi_star_bar_nl * alpha_star_nl(j,k);
+          alpha_nl_tmp = alpha_nl;
           alpha_nl_tmp.col(j) = alpha_nl.col(j) - X_nl.cols(span(cd[k], cd[k+1]-1))*omega_nl(j, span(cd[k], cd[k+1]-1)).t() + X_nl.cols(span(cd[k], cd[k+1]-1))*omega_nl_tmp.t();
+          beta_nl_tmp = beta_nl;
           beta_nl_tmp.cols(span(cd[j], cd[j+1]-1)) = alpha_nl_tmp.col(j)*xi_nl(span(cd[j], cd[j+1]-1)).t();
-          eta_pl = compLinPred(nobs, p, cd, eta0, X_l, beta_l, X_nl, beta_nl);
-          eta_pl_tmp = eta_pl - arma::sum(X_nl.cols(span(cd[j], cd[j+1]-1))%beta_nl.cols(span(cd[j], cd[j+1]-1)), 1) + arma::sum(X_nl.cols(span(cd[j], cd[j+1]-1))%beta_nl_tmp.cols(span(cd[j], cd[j+1]-1)), 1);
+          eta_pl_tmp = compLinPred(nobs, p, cd, eta0, X_l, beta_l, X_nl, beta_nl_tmp);
           List uxsnl = update_xiNLC(y, eta_pl_tmp, eta_pl, sigma, m_star_nl(j, span(cd[k], cd[k+1]-1)).t(), xi_star_bar_nl.t(), xi_star_nl(j, span(cd[k], cd[k+1]-1)).t());
           arma::rowvec resultXiSnl = uxsnl[0];
           xi_star_nl(j, span(cd[k], cd[k+1]-1)) = resultXiSnl;
           arma::rowvec accxisnl = uxsnl[1];
           xi_star_nl_acc(j, span(cd[k], cd[k+1]-1)) = xi_star_nl_acc(j, span(cd[k], cd[k+1]-1)) + accxisnl;
+          omega_nl(j, span(cd[k], cd[k+1]-1)) = xi_star_nl(j, span(cd[k], cd[k+1]-1))*alpha_star_nl(j,k);
           alpha_nl.col(j) = alpha_0_nl(j)*vecOnes;
           for (int kn = (j+1); kn<p; kn++) {
-            arma::vec col_ind = myRange(cd[kn], cd[kn+1]-1);
-            arma::uvec ucol_ind = arma::conv_to<arma::uvec>::from(col_ind);
-            alpha_nl.col(j) = alpha_nl.col(j) + X_nl.cols(ucol_ind)*omega_nl(j, span(cd[kn], cd[kn+1]-1)).t();
+            alpha_nl.col(j) = alpha_nl.col(j) + X_nl.cols(span(cd[kn], cd[kn+1]-1))*omega_nl(j, span(cd[kn], cd[kn+1]-1)).t();
           }
           beta_nl.cols(span(cd[j], cd[j+1]-1)) = alpha_nl.col(j)*xi_nl(span(cd[j], cd[j+1]-1)).t();
+          eta_pl = compLinPred(nobs, p, cd, eta0, X_l, beta_l, X_nl, beta_nl);
         }
       } // end non linear k
     } // end non linear j
@@ -876,6 +890,7 @@ List bodyMCMC(arma::vec y, int p, int nobs, arma::vec cd, arma::vec d, arma::mat
       beta_nl.cols(span(cd[j], cd[j+1]-1)) = alpha_nl.col(j)*xi_nl(span(cd[j], cd[j+1]-1)).t();
     }
     eta_pl = compLinPred(nobs, p, cd, eta0, X_l, beta_l, X_nl, beta_nl);
+    
     // update pi 0 linear
     pi_0_l = update_piNSC(hyperpar(5), hyperpar(6), gamma_0_l, hyperpar(4));
     // update pi 0 non linear
@@ -889,11 +904,19 @@ List bodyMCMC(arma::vec y, int p, int nobs, arma::vec cd, arma::vec d, arma::mat
       tau_0_l(j) = update_tauC(hyperpar(0), hyperpar(1), alpha_0_l(j), gamma_0_l(j));
       tau_0_nl(j) = update_tauC(hyperpar(0), hyperpar(1), alpha_0_nl(j), gamma_0_nl(j));
     }
+
     // update alpha 0 linear
     for (int j = 0; j<p; j++) {
       // proposed alpha
       alpha_0_bar = alpha_0_l(j) + R::rnorm(0, mht(4));
-      arma::vec eta_pl_tmp = eta_pl - X_l.col(j)*alpha_0_l(j)*xi_l(j) + X_l.col(j)*alpha_0_bar*xi_l(j);
+      alpha_l_tmp = alpha_l;
+      alpha_l_tmp.col(j) = alpha_0_bar*vecOnes;
+      for (int kn = (j+1); kn<p; kn++) {
+        alpha_l_tmp.col(j) = alpha_l_tmp.col(j) + X_l.col(kn)*omega_l(j, kn);
+      }
+      beta_l_tmp = beta_l;
+      beta_l_tmp.col(j) = xi_l(j) * alpha_l_tmp.col(j);
+      eta_pl_tmp = compLinPred(nobs, p, cd, eta0, X_l, beta_l_tmp, X_nl, beta_nl);
       // update alpha 0 linear
       List ua0l = update_alphaC(y, sigma, tau_0_l(j), gamma_0_l(j), eta_pl_tmp, eta_pl, alpha_0_bar, alpha_0_l(j));
       alpha_0_l(j) = ua0l[0];
@@ -906,43 +929,51 @@ List bodyMCMC(arma::vec y, int p, int nobs, arma::vec cd, arma::vec d, arma::mat
       beta_l.col(j) = alpha_l.col(j)*xi_l(j);
     }
     eta_pl = compLinPred(nobs, p, cd, eta0, X_l, beta_l, X_nl, beta_nl);
+    
     // update alpha 0 non linear
     for (int j = 0; j<p; j++) {
       // proposed alpha
       alpha_0_bar = alpha_0_nl(j) + R::rnorm(0, mht(4));
-      arma::mat NoUpAlpha_nl = (alpha_0_nl(j)*vecOnes)*xi_nl(span(cd[j], cd[j+1]-1)).t();
-      arma::mat UpAlpha_nl = (alpha_0_bar*vecOnes)*xi_nl(span(cd[j], cd[j+1]-1)).t();
-      eta_pl_tmp = eta_pl - arma::sum(X_nl.cols(span(cd[j], cd[j+1]-1))%NoUpAlpha_nl, 1) + arma::sum(X_nl.cols(span(cd[j], cd[j+1]-1))%UpAlpha_nl, 1);
+      alpha_nl_tmp = alpha_nl;
+      alpha_nl_tmp.col(j) = alpha_0_bar*vecOnes;
+      for (int kn = (j+1); kn<p; kn++) {
+        alpha_nl_tmp.col(j) = alpha_nl_tmp.col(j) + X_nl.cols(span(cd[kn], cd[kn+1]-1))*omega_nl(j, span(cd[kn], cd[kn+1]-1)).t();
+      }
+      beta_nl_tmp = beta_nl;
+      beta_nl_tmp.cols(span(cd[j], cd[j+1]-1)) = alpha_nl_tmp.col(j)*xi_nl(span(cd[j], cd[j+1]-1)).t();
+      eta_pl_tmp = compLinPred(nobs, p, cd, eta0, X_l, beta_l, X_nl, beta_nl_tmp);
       List ua0nl = update_alphaC(y, sigma, tau_0_nl(j), gamma_0_nl(j), eta_pl_tmp, eta_pl, alpha_0_bar, alpha_0_nl(j));
       alpha_0_nl(j) = ua0nl[0];
       int accAnlpha0 = ua0nl[1];
       alpha_0_nl_acc(j) = alpha_0_nl_acc(j) + accAnlpha0;
       alpha_nl.col(j) = alpha_0_nl(j)*vecOnes;
       for (int k = (j+1); k<p; k++) {
-        arma::vec col_ind = myRange(cd[k], cd[k+1]-1);
-        arma::uvec ucol_ind = arma::conv_to<arma::uvec>::from(col_ind);
-        alpha_nl.col(j) = alpha_nl.col(j) + X_nl.cols(ucol_ind)*omega_nl(j, span(cd[k], cd[k+1]-1)).t();
+        alpha_nl.col(j) = alpha_nl.col(j) + X_nl.cols(span(cd[k], cd[k+1]-1))*omega_nl(j, span(cd[k], cd[k+1]-1)).t();
       }
       beta_nl.cols(span(cd[j], cd[j+1]-1)) = alpha_nl.col(j)*xi_nl(span(cd[j], cd[j+1]-1)).t();
     }
+    
     eta_pl = compLinPred(nobs, p, cd, eta0, X_l, beta_l, X_nl, beta_nl);
+    
     // update m linear
     for (int j = 0; j<p; j++) {
       m_l(j) = update_mCsca(xi_l(j));
     }
+    
     // update m non linear
     for (int l = 0; l<q; l++) {
       m_nl(l) = update_mCsca(xi_nl(l));
     }
+    
     // update xi linear
-    beta_l_tmp = beta_l;
     for (int j = 0; j<p; j++) {
       // proposed xi
       xi_star = xi_l(j) + R::rnorm(0, mht(6));
       // compute the new beta linear
+      beta_l_tmp = beta_l;
       beta_l_tmp.col(j) = alpha_l.col(j)*xi_star;
       // compute the new linear predictor with the proposed xi
-      eta_pl_tmp = eta_pl - X_l.col(j)%beta_l.col(j) + X_l.col(j)%beta_l_tmp.col(j);
+      eta_pl_tmp = compLinPred(nobs, p, cd, eta0, X_l, beta_l_tmp, X_nl, beta_nl);
       // update xi linear
       List uxl = update_xiLC(y, eta_pl_tmp, eta_pl, sigma, m_l(j), xi_star, xi_l(j));
       xi_l(j) = uxl[0];
@@ -951,21 +982,22 @@ List bodyMCMC(arma::vec y, int p, int nobs, arma::vec cd, arma::vec d, arma::mat
       beta_l.col(j) = alpha_l.col(j)*xi_l(j);
     }
     eta_pl = compLinPred(nobs, p, cd, eta0, X_l, beta_l, X_nl, beta_nl);
+    
     // update xi non linear
-    xi_starnl = xi_nl + as<arma::vec>(wrap(Rcpp::rnorm(q, 0, mht(7))));
-    beta_nl_tmp = beta_nl;
+    // xi_starnl = xi_nl + as<arma::vec>(wrap(Rcpp::rnorm(q, 0, mht(7))));
     for (int j = 0; j<p; j++) {
-      beta_nl_tmp.cols(span(cd[j], cd[j+1]-1)) = alpha_nl.col(j) * xi_starnl(span(cd[j], cd[j+1]-1)).t();
-      arma::vec col_ind = myRange(cd[j], cd[j+1]-1);
-      arma::uvec ucol_ind = arma::conv_to<arma::uvec>::from(col_ind);
-      eta_pl_tmp = eta_pl - arma::sum(X_nl.cols(ucol_ind)%beta_nl.cols(ucol_ind), 1) + arma::sum(X_nl.cols(ucol_ind)%beta_nl_tmp.cols(ucol_ind), 1); // apply function
-      List uxnl = update_xiNLC(y, eta_pl_tmp, eta_pl, sigma, m_nl(span(cd[j], cd[j+1]-1)), xi_starnl(span(cd[j], cd[j+1]-1)), xi_nl(span(cd[j], cd[j+1]-1)));
+      xi_starnl = xi_nl(span(cd[j], cd[j+1]-1)) + R::rnorm(0, mht(7));
+      beta_nl_tmp = beta_nl;
+      beta_nl_tmp.cols(span(cd[j], cd[j+1]-1)) = alpha_nl.col(j)*xi_starnl.t();
+      eta_pl_tmp = compLinPred(nobs, p, cd, eta0, X_l, beta_l, X_nl, beta_nl_tmp);
+      List uxnl = update_xiNLC(y, eta_pl_tmp, eta_pl, sigma, m_nl(span(cd[j], cd[j+1]-1)), xi_starnl, xi_nl(span(cd[j], cd[j+1]-1)));
       arma::vec resXnl = uxnl[0];
       xi_nl(span(cd[j], cd[j+1]-1)) = resXnl;
       arma::vec accXinl = uxnl[1];
       xi_nl_acc(span(cd[j], cd[j+1]-1)) = xi_nl_acc(span(cd[j], cd[j+1]-1)) + accXinl;
       beta_nl.cols(span(cd[j], cd[j+1]-1)) = alpha_nl.col(j)*xi_nl(span(cd[j], cd[j+1]-1)).t();
     }
+    
     // rescale alpha and xi linear
     for (int j = 0; j<p; j++) {
       // scaling factor
@@ -975,6 +1007,7 @@ List bodyMCMC(arma::vec y, int p, int nobs, arma::vec cd, arma::vec d, arma::mat
       // rescale alpha linear
       alpha_l.col(j) = sFct*alpha_l.col(j);
     }
+    
     // rescale alpha and xi non linear
     for (int j = 0; j<p; j++) {
       // scaling factor
@@ -984,6 +1017,7 @@ List bodyMCMC(arma::vec y, int p, int nobs, arma::vec cd, arma::vec d, arma::mat
       // rescale non linear alpha
       alpha_nl.col(j) = alpha_nl.col(j)/sFct;
     }
+    
     // update beta linear and non linear after rescaling alpha and xi
     // beta linear and non linear
     for (int j = 0; j<p; j++) {
@@ -997,7 +1031,8 @@ List bodyMCMC(arma::vec y, int p, int nobs, arma::vec cd, arma::vec d, arma::mat
     arma::vec eta_noInt = eta_pl - eta0*vecOnes;
     eta0 = updateInterceptC(y, nobs, eta_noInt, sigma);
     // update linear predictor
-    eta_pl = eta_noInt + eta0*vecOnes;
+    // eta_pl = eta_noInt + eta0*vecOnes;
+    eta_pl = compLinPred(nobs, p, cd, eta0, X_l, beta_l, X_nl, beta_nl);
     // update sigma variance
     sigma = update_sigmaC(y, eta_pl, hyperpar(2), hyperpar(3), nobs);
     // log-likelihood
