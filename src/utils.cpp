@@ -557,7 +557,7 @@ List bodyMCMC(arma::vec y, int p, int nobs, arma::vec cd, arma::vec d, arma::mat
             }
             // compute linear beta
             beta_l.col(j) = alpha_l.col(j)*xi_l(j);
-            eta_pl = compLinPred(nobs, p, cd, eta0, X_l, beta_l, X_nl, beta_nl);
+            // eta_pl = compLinPred(nobs, p, cd, eta0, X_l, beta_l, X_nl, beta_nl);
           }
         }
         
@@ -618,7 +618,7 @@ List bodyMCMC(arma::vec y, int p, int nobs, arma::vec cd, arma::vec d, arma::mat
             }
             // compute linear beta
             beta_l.col(j) = alpha_l.col(j)*xi_l(j);
-            eta_pl = compLinPred(nobs, p, cd, eta0, X_l, beta_l, X_nl, beta_nl);
+            // eta_pl = compLinPred(nobs, p, cd, eta0, X_l, beta_l, X_nl, beta_nl);
           }
         }
         
@@ -679,7 +679,7 @@ List bodyMCMC(arma::vec y, int p, int nobs, arma::vec cd, arma::vec d, arma::mat
           }
           // compute linear beta
           beta_l.col(j) = alpha_l.col(j)*xi_l(j);
-          eta_pl = compLinPred(nobs, p, cd, eta0, X_l, beta_l, X_nl, beta_nl);
+          // eta_pl = compLinPred(nobs, p, cd, eta0, X_l, beta_l, X_nl, beta_nl);
         }
       } // end linear k
     } // end linear j
@@ -738,7 +738,7 @@ List bodyMCMC(arma::vec y, int p, int nobs, arma::vec cd, arma::vec d, arma::mat
               alpha_nl.col(j) = alpha_nl.col(j) + X_nl.cols(span(cd[kn], cd[kn+1]-1))*omega_nl(j, span(cd[kn], cd[kn+1]-1)).t();
             }
             beta_nl.cols(span(cd[j], cd[j+1]-1)) = alpha_nl.col(j)*xi_nl(span(cd[j], cd[j+1]-1)).t();
-            eta_pl = compLinPred(nobs, p, cd, eta0, X_l, beta_l, X_nl, beta_nl);
+            // eta_pl = compLinPred(nobs, p, cd, eta0, X_l, beta_l, X_nl, beta_nl);
           }
         }
         
@@ -793,7 +793,7 @@ List bodyMCMC(arma::vec y, int p, int nobs, arma::vec cd, arma::vec d, arma::mat
               alpha_nl.col(j) = alpha_nl.col(j) + X_nl.cols(span(cd[kn], cd[kn+1]-1))*omega_nl(j, span(cd[kn], cd[kn+1]-1)).t();
             }
             beta_nl.cols(span(cd[j], cd[j+1]-1)) = alpha_nl.col(j)*xi_nl(span(cd[j], cd[j+1]-1)).t();
-            eta_pl = compLinPred(nobs, p, cd, eta0, X_l, beta_l, X_nl, beta_nl);
+            // eta_pl = compLinPred(nobs, p, cd, eta0, X_l, beta_l, X_nl, beta_nl);
           }
         }
         
@@ -847,7 +847,7 @@ List bodyMCMC(arma::vec y, int p, int nobs, arma::vec cd, arma::vec d, arma::mat
             alpha_nl.col(j) = alpha_nl.col(j) + X_nl.cols(span(cd[kn], cd[kn+1]-1))*omega_nl(j, span(cd[kn], cd[kn+1]-1)).t();
           }
           beta_nl.cols(span(cd[j], cd[j+1]-1)) = alpha_nl.col(j)*xi_nl(span(cd[j], cd[j+1]-1)).t();
-          eta_pl = compLinPred(nobs, p, cd, eta0, X_l, beta_l, X_nl, beta_nl);
+          // eta_pl = compLinPred(nobs, p, cd, eta0, X_l, beta_l, X_nl, beta_nl);
         }
       } // end non linear k
     } // end non linear j
@@ -875,7 +875,7 @@ List bodyMCMC(arma::vec y, int p, int nobs, arma::vec cd, arma::vec d, arma::mat
       beta_l.col(j) = alpha_l.col(j)*xi_l(j);
       beta_nl.cols(span(cd[j], cd[j+1]-1)) = alpha_nl.col(j)*xi_nl(span(cd[j], cd[j+1]-1)).t();
     }
-    eta_pl = compLinPred(nobs, p, cd, eta0, X_l, beta_l, X_nl, beta_nl);
+    // eta_pl = compLinPred(nobs, p, cd, eta0, X_l, beta_l, X_nl, beta_nl);
     
     // update pi 0 linear
     pi_0_l = update_piNSC(hyperpar(5), hyperpar(6), gamma_0_l, hyperpar(4));
@@ -915,7 +915,7 @@ List bodyMCMC(arma::vec y, int p, int nobs, arma::vec cd, arma::vec d, arma::mat
       }
       beta_l.col(j) = alpha_l.col(j)*xi_l(j);
     }
-    eta_pl = compLinPred(nobs, p, cd, eta0, X_l, beta_l, X_nl, beta_nl);
+    // eta_pl = compLinPred(nobs, p, cd, eta0, X_l, beta_l, X_nl, beta_nl);
     
     // update alpha 0 non linear
     for (int j = 0; j<p; j++) {
@@ -940,7 +940,7 @@ List bodyMCMC(arma::vec y, int p, int nobs, arma::vec cd, arma::vec d, arma::mat
       beta_nl.cols(span(cd[j], cd[j+1]-1)) = alpha_nl.col(j)*xi_nl(span(cd[j], cd[j+1]-1)).t();
     }
     
-    eta_pl = compLinPred(nobs, p, cd, eta0, X_l, beta_l, X_nl, beta_nl);
+    // eta_pl = compLinPred(nobs, p, cd, eta0, X_l, beta_l, X_nl, beta_nl);
     
     // update m linear
     for (int j = 0; j<p; j++) {
@@ -968,7 +968,7 @@ List bodyMCMC(arma::vec y, int p, int nobs, arma::vec cd, arma::vec d, arma::mat
       xi_l_acc(j) = xi_l_acc(j) + acc_xil;
       beta_l.col(j) = alpha_l.col(j)*xi_l(j);
     }
-    eta_pl = compLinPred(nobs, p, cd, eta0, X_l, beta_l, X_nl, beta_nl);
+    // eta_pl = compLinPred(nobs, p, cd, eta0, X_l, beta_l, X_nl, beta_nl);
     
     // update xi non linear
     // xi_starnl = xi_nl + as<arma::vec>(wrap(Rcpp::rnorm(q, 0, mht(7))));
