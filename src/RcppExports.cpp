@@ -11,18 +11,6 @@ Rcpp::Rostream<true>&  Rcpp::Rcout = Rcpp::Rcpp_cout_get();
 Rcpp::Rostream<false>& Rcpp::Rcerr = Rcpp::Rcpp_cerr_get();
 #endif
 
-// myRange
-arma::vec myRange(int start, int end);
-RcppExport SEXP _invent_myRange(SEXP startSEXP, SEXP endSEXP) {
-BEGIN_RCPP
-    Rcpp::RObject rcpp_result_gen;
-    Rcpp::RNGScope rcpp_rngScope_gen;
-    Rcpp::traits::input_parameter< int >::type start(startSEXP);
-    Rcpp::traits::input_parameter< int >::type end(endSEXP);
-    rcpp_result_gen = Rcpp::wrap(myRange(start, end));
-    return rcpp_result_gen;
-END_RCPP
-}
 // callrgamma
 NumericVector callrgamma(int n, double shape, double scale);
 RcppExport SEXP _invent_callrgamma(SEXP nSEXP, SEXP shapeSEXP, SEXP scaleSEXP) {
@@ -300,7 +288,6 @@ END_RCPP
 }
 
 static const R_CallMethodDef CallEntries[] = {
-    {"_invent_myRange", (DL_FUNC) &_invent_myRange, 2},
     {"_invent_callrgamma", (DL_FUNC) &_invent_callrgamma, 3},
     {"_invent_updateInterceptC", (DL_FUNC) &_invent_updateInterceptC, 4},
     {"_invent_update_mCsca", (DL_FUNC) &_invent_update_mCsca, 1},
