@@ -9,10 +9,6 @@ callrgamma <- function(n, shape, scale) {
     .Call(`_invent_callrgamma`, n, shape, scale)
 }
 
-set_seed <- function(seed) {
-    invisible(.Call(`_invent_set_seed`, seed))
-}
-
 updateInterceptC <- function(y, nobs, lp_noInt, sigma) {
     .Call(`_invent_updateInterceptC`, y, nobs, lp_noInt, sigma)
 }

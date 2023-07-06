@@ -36,16 +36,6 @@ BEGIN_RCPP
     return rcpp_result_gen;
 END_RCPP
 }
-// set_seed
-void set_seed(double seed);
-RcppExport SEXP _invent_set_seed(SEXP seedSEXP) {
-BEGIN_RCPP
-    Rcpp::RNGScope rcpp_rngScope_gen;
-    Rcpp::traits::input_parameter< double >::type seed(seedSEXP);
-    set_seed(seed);
-    return R_NilValue;
-END_RCPP
-}
 // updateInterceptC
 double updateInterceptC(arma::vec y, int nobs, arma::vec lp_noInt, double sigma);
 RcppExport SEXP _invent_updateInterceptC(SEXP ySEXP, SEXP nobsSEXP, SEXP lp_noIntSEXP, SEXP sigmaSEXP) {
@@ -312,7 +302,6 @@ END_RCPP
 static const R_CallMethodDef CallEntries[] = {
     {"_invent_myRange", (DL_FUNC) &_invent_myRange, 2},
     {"_invent_callrgamma", (DL_FUNC) &_invent_callrgamma, 3},
-    {"_invent_set_seed", (DL_FUNC) &_invent_set_seed, 1},
     {"_invent_updateInterceptC", (DL_FUNC) &_invent_updateInterceptC, 4},
     {"_invent_update_mCsca", (DL_FUNC) &_invent_update_mCsca, 1},
     {"_invent_update_mCvec", (DL_FUNC) &_invent_update_mCvec, 1},
