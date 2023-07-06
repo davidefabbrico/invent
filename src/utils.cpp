@@ -12,18 +12,6 @@ using namespace std;
 // [[Rcpp::depends(RcppArmadillo)]]
 
 // [[Rcpp::export]]
-arma::vec myRange(int start, int end) {
-  int dimension = end-start+1;
-  arma::vec myVec(dimension);
-  int j = 0;
-  for(int i=start; i<=end; i++) {
-    myVec(j) = i;
-    j++;
-  }
-  return myVec;
-}
-
-// [[Rcpp::export]]
 NumericVector callrgamma(int n, double shape, double scale) { 
   return(rgamma(n, shape, scale)); 
 }
@@ -360,9 +348,7 @@ List bodyMCMC(arma::vec y, int p, int nobs, arma::vec cd, arma::vec d, arma::mat
       for (int k = (j+1); k<p; k++) {
         alpha_l.col(j) = alpha_l.col(j) + X_l.col(j)*omega_l(j,k);
         // matrix multiplication and slice
-        arma::vec col_ind = myRange(cd[k], cd[k+1]-1);
-        arma::uvec ucol_ind = arma::conv_to<arma::uvec>::from(col_ind);
-        alpha_nl.col(j) = alpha_nl.col(j) + X_nl.cols(ucol_ind)*omega_nl(j, span(cd[k], cd[k+1]-1)).t();
+        alpha_nl.col(j) = alpha_nl.col(j) + X_nl.cols(span(cd[k], cd[k+1]-1))*omega_nl(j, span(cd[k], cd[k+1]-1)).t();
       }
     }
   }
@@ -899,6 +885,7 @@ List bodyMCMC(arma::vec y, int p, int nobs, arma::vec cd, arma::vec d, arma::mat
     gamma_0_l = update_gammaVecC(pi_0_l, hyperpar(4), alpha_0_l, tau_0_l);
     // update gamma 0 non linear
     gamma_0_nl = update_gammaVecC(pi_0_nl, hyperpar(4), alpha_0_nl, tau_0_nl);
+    
     // update tau 0 linear
     for (int j = 0; j<p; j++) {
       tau_0_l(j) = update_tauC(hyperpar(0), hyperpar(1), alpha_0_l(j), gamma_0_l(j));
@@ -1100,29 +1087,28 @@ List bodyMCMC(arma::vec y, int p, int nobs, arma::vec cd, arma::vec d, arma::mat
                       // Named("xi_nl") = XI_nl,
                       // Named("xi_star_l") = XI_S_l,
                       // Named("xi_star_nl") = XI_S_nl,
-                      //Named("tau_0_l") = TAU_0_l,
-                      //Named("tau_0_nl") = TAU_0_nl,
-                      //Named("tau_star_l") = TAU_S_l,
-                      //Named("tau_star_nl") = TAU_S_nl
+                      // Named("tau_0_l") = TAU_0_l,
+                      // Named("tau_0_nl") = TAU_0_nl,
+                      // Named("tau_star_l") = TAU_S_l,
+                      // Named("tau_star_nl") = TAU_S_nl
                       Named("gamma_0_l") = GAMMA_0_l,
                       Named("gamma_0_nl") = GAMMA_0_nl,
                       Named("gamma_star_l") = GAMMA_S_l,
                       Named("gamma_star_nl") = GAMMA_S_nl,
-                      //Named("pi_0_l") = PI_0_l
-                      //Named("pi_0_nl") = PI_0_nl,
-                      //Named("pi_star_l") = PI_S_l,
+                      // Named("pi_0_l") = PI_0_l
+                      // Named("pi_0_nl") = PI_0_nl,
+                      // Named("pi_star_l") = PI_S_l,
                       // Named("pi_star_nl") = PI_S_nl,
                       Named("sigma") = SIGMA,
                       Named("LogLikelihood") = LOGLIKELIHOOD,
-                      //Named("acc_a_s_l") = alpha_star_l_acc/iter,
-                      //Named("acc_a_s_nl") = alpha_star_nl_acc/iter,
-                      //Named("acc_xi_s_l") = xi_star_l_acc/iter,
-                      //Named("acc_xi_s_nl") = xi_star_nl_acc/iter,
-                      //Named("acc_a_0_l") = alpha_0_l_acc/iter, 
-                      //Named("acc_a_0_nl") = alpha_0_nl_acc/iter, 
-                      //Named("acc_xi_l") = xi_l_acc/iter, 
-                      //Named("acc_xi_nl") = xi_nl_acc/iter
+                      // Named("acc_a_s_l") = alpha_star_l_acc/iter,
+                      // Named("acc_a_s_nl") = alpha_star_nl_acc/iter,
+                      // Named("acc_xi_s_l") = xi_star_l_acc/iter,
+                      // Named("acc_xi_s_nl") = xi_star_nl_acc/iter,
+                      // Named("acc_a_0_l") = alpha_0_l_acc/iter, 
+                      // Named("acc_a_0_nl") = alpha_0_nl_acc/iter, 
+                      // Named("acc_xi_l") = xi_l_acc/iter, 
+                      // Named("acc_xi_nl") = xi_nl_acc/iter
                       Named("Execution Time") = duration/1000000
-                      //Named("Profiling") = Prof_Mat
   );
 }
