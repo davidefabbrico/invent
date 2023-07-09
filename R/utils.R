@@ -163,20 +163,20 @@ gendata <- function(n_obs = 200, p = 10, minb = 1.5, maxb = 3.0, error = 0.01, s
     }
   }
   
-  if (scenario == 4 || scenario == 2) {
-    if (ha == 2) {
-      for (i in 1:(p-1)) {
-        for (j in (i+1):p) {
-          if ((alpha_0_tilde[1,i] != 0) & (alpha_0_tilde[1,j] != 0)) {
-            omega_tilde[i, (cd[j]+1):(cd[j+1])] <- alpha_0_tilde[1,i]*alpha_0_tilde[1,j]
-          }
-        }
-      }
-    }
-  }
+  # if (scenario == 4 || scenario == 2) {
+  #   if (ha == 2) {
+  #     for (i in 1:(p-1)) {
+  #       for (j in (i+1):p) {
+  #         if ((alpha_0_tilde[1,i] != 0) & (alpha_0_tilde[1,j] != 0)) {
+  #           omega_tilde[i, (cd[j]+1):(cd[j+1])] <- alpha_0_tilde[1,i]*alpha_0_tilde[1,j]
+  #         }
+  #       }
+  #     }
+  #   }
+  # }
   
   if (ha == 2) {
-    if (scenario == 2) {
+    if (scenario == 2 || scenario == 4) {
       for (i in 1:(p-1)) {
         for (j in (i+1):p) {
           if ((alpha_0_l[1,i] != 0) & (alpha_0_l[1,j] != 0)) {
@@ -335,5 +335,3 @@ my_indices_int <- function(est, truth, linear = TRUE, d, omega_tilde){
   fpr <- contTable[1,2]/sum(contTable[,2])
   return(list(matt, tpr, fpr, sel))
 }
-
-
