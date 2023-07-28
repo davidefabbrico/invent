@@ -5,7 +5,7 @@
 ##### ------------------------------------------------------------------ ######
 invMCMC <- function(y, x, x_val, hyperpar = c(5, 25, 5, 5, 0.00025, 0.4, 1.6, 0.2, 1.8), 
                    mht = c(1.4, 0.8, 1, 0.3, 0.7, 0.4, 4, 2.5), 
-                   rank = 0.95, iter = 10000, burnin = iter/2, thin = 5, ha = 2, n_val=100) {
+                   rank = 0.95, iter = 10000, burnin = iter/2, thin = 5, ha = 2, n_val=100, pred = TRUE) {
 
   result <- NULL
   #useful quantities
@@ -28,16 +28,15 @@ invMCMC <- function(y, x, x_val, hyperpar = c(5, 25, 5, 5, 0.00025, 0.4, 1.6, 0.
     d[j] <- dim(xjtilde)[2]
   }
   cd <- c(0, cumsum(d))
-  pred <- TRUE
-  if (n_val != 0) {
+  q <- sum(d)
+  if (pred) {
     x_val <- cbind(X_l[(nobs-n_val+1):nobs,], X_nl[(nobs-n_val+1):nobs,])
     X_l <- X_l[1:(nobs-n_val),]
     X_nl <- X_nl[1:(nobs-n_val),]
+    nobs = nobs - n_val
   } else {
-    x_val <- matrix(0, nrow = 1, ncol = 1)
-    pred <- FALSE
+    x_val <- matrix(0, nrow = n_val, ncol = p+q)
   }
-  
   result = bodyMCMC(as.vector(y), as.integer(p), as.integer(nobs), as.vector(cd), 
                     as.vector(d), as.matrix(X_l), as.matrix(X_nl), 
                     as.vector(hyperpar), as.vector(mht), as.integer(iter), 

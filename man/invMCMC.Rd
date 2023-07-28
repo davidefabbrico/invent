@@ -15,7 +15,8 @@ invMCMC(
   burnin = iter/2,
   thin = 5,
   ha = 2,
-  n_val = 100
+  n_val = 100,
+  pred = TRUE
 )
 }
 \description{
