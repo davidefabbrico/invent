@@ -1004,17 +1004,18 @@ List bodyMCMC(arma::vec y, int p, int nobs, arma::vec cd, arma::vec d, arma::mat
     arma::mat beta_val_nl(n_val, q);
     arma::vec eta_pl_val(n_val);
     arma::vec y_tilde(n_val);
+    arma::vec vecOnesVal = ones(n_val, 1);
     if (pred == true) {
       // compute alpha linear
       for (int j = 0; j<p; j++) {
-        alpha_val_l.col(j) = alpha_0_l(j)*vecOnes;
+        alpha_val_l.col(j) = alpha_0_l(j)*vecOnesVal;
         for (int k = (j+1); k<p; k++) {
           alpha_val_l.col(j) = alpha_val_l.col(j) + X_val_l.col(k)*omega_l(j,k);
         }
       }
       // compute alpha non linear
       for (int j = 0; j<p; j++) {
-        alpha_val_nl.col(j) = alpha_0_nl(j)*vecOnes;
+        alpha_val_nl.col(j) = alpha_0_nl(j)*vecOnesVal;
         for (int k = (j+1); k<p; k++) {
           alpha_val_nl.col(j) = alpha_val_nl.col(j) + X_val_nl.cols(span(cd[k], cd[k+1]-1))*omega_nl(j, span(cd[k], cd[k+1]-1)).t();
         }
