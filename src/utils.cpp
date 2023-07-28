@@ -250,7 +250,7 @@ arma::vec compLinPred(int nobs, int p, arma::vec cd, double eta0, arma::mat X_l,
 
 // Body MCMC
 // [[Rcpp::export]]
-List bodyMCMC(arma::vec y, int p, int nobs, arma::vec cd, arma::vec d, arma::mat X_l, arma::mat X_nl, arma::vec hyperpar, arma::vec mht, int iter, int burnin, int thin, int ha, arma::mat X_val = NULL) {
+List bodyMCMC(arma::vec y, int p, int nobs, arma::vec cd, arma::vec d, arma::mat X_l, arma::mat X_nl, arma::vec hyperpar, arma::vec mht, int iter, int burnin, int thin, int ha, arma::mat X_val, bool pred = true) {
   // Time 
   auto start = std::chrono::high_resolution_clock::now();
   ////////////////////////////////////////////////////
@@ -998,13 +998,13 @@ List bodyMCMC(arma::vec y, int p, int nobs, arma::vec cd, arma::vec d, arma::mat
     // log-likelihood
     double logLik = arma::accu(dnormLogVec(y, eta_pl, sqrt(sigma)));
     // predictive
-    arma::mat alpha_val_l(n_val,p);
-    arma::mat alpha_val_nl(n_val,p);
-    arma::mat beta_val_l(n_val,p);
-    arma::mat beta_val_nl(n_val,q);
+    arma::mat alpha_val_l(n_val, p);
+    arma::mat alpha_val_nl(n_val, p);
+    arma::mat beta_val_l(n_val, p);
+    arma::mat beta_val_nl(n_val, q);
     arma::vec eta_pl_val(n_val);
     arma::vec y_tilde(n_val);
-    if (X_val != NULL) {
+    if (pred == true) {
       // compute alpha linear
       for (int j = 0; j<p; j++) {
         alpha_val_l.col(j) = alpha_0_l(j)*vecOnes;
@@ -1027,7 +1027,9 @@ List bodyMCMC(arma::vec y, int p, int nobs, arma::vec cd, arma::vec d, arma::mat
       // compute linear predictor
       eta_pl_val = compLinPred(n_val, p, cd, eta0, X_val_l, beta_val_l, X_val_nl, beta_val_nl);
       // y_tilde
-      y_tilde = rnorm(1, eta_pl_val, sqrt(sigma));
+      for (int i = 0; i<n_val; i++) {
+        y_tilde(i) = R::rnorm(eta_pl_val(i), sqrt(sigma));
+      }
     }
     // store resutls
     if(t%thin == 0 && t > burnin-1) { // we start from 0

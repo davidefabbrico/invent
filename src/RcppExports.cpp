@@ -264,8 +264,8 @@ BEGIN_RCPP
 END_RCPP
 }
 // bodyMCMC
-List bodyMCMC(arma::vec y, int p, int nobs, arma::vec cd, arma::vec d, arma::mat X_l, arma::mat X_nl, arma::vec hyperpar, arma::vec mht, int iter, int burnin, int thin, int ha);
-RcppExport SEXP _invent_bodyMCMC(SEXP ySEXP, SEXP pSEXP, SEXP nobsSEXP, SEXP cdSEXP, SEXP dSEXP, SEXP X_lSEXP, SEXP X_nlSEXP, SEXP hyperparSEXP, SEXP mhtSEXP, SEXP iterSEXP, SEXP burninSEXP, SEXP thinSEXP, SEXP haSEXP) {
+List bodyMCMC(arma::vec y, int p, int nobs, arma::vec cd, arma::vec d, arma::mat X_l, arma::mat X_nl, arma::vec hyperpar, arma::vec mht, int iter, int burnin, int thin, int ha, arma::mat X_val, bool pred);
+RcppExport SEXP _invent_bodyMCMC(SEXP ySEXP, SEXP pSEXP, SEXP nobsSEXP, SEXP cdSEXP, SEXP dSEXP, SEXP X_lSEXP, SEXP X_nlSEXP, SEXP hyperparSEXP, SEXP mhtSEXP, SEXP iterSEXP, SEXP burninSEXP, SEXP thinSEXP, SEXP haSEXP, SEXP X_valSEXP, SEXP predSEXP) {
 BEGIN_RCPP
     Rcpp::RObject rcpp_result_gen;
     Rcpp::RNGScope rcpp_rngScope_gen;
@@ -282,7 +282,9 @@ BEGIN_RCPP
     Rcpp::traits::input_parameter< int >::type burnin(burninSEXP);
     Rcpp::traits::input_parameter< int >::type thin(thinSEXP);
     Rcpp::traits::input_parameter< int >::type ha(haSEXP);
-    rcpp_result_gen = Rcpp::wrap(bodyMCMC(y, p, nobs, cd, d, X_l, X_nl, hyperpar, mht, iter, burnin, thin, ha));
+    Rcpp::traits::input_parameter< arma::mat >::type X_val(X_valSEXP);
+    Rcpp::traits::input_parameter< bool >::type pred(predSEXP);
+    rcpp_result_gen = Rcpp::wrap(bodyMCMC(y, p, nobs, cd, d, X_l, X_nl, hyperpar, mht, iter, burnin, thin, ha, X_val, pred));
     return rcpp_result_gen;
 END_RCPP
 }
@@ -306,7 +308,7 @@ static const R_CallMethodDef CallEntries[] = {
     {"_invent_update_xiNLC", (DL_FUNC) &_invent_update_xiNLC, 7},
     {"_invent_mysign", (DL_FUNC) &_invent_mysign, 1},
     {"_invent_compLinPred", (DL_FUNC) &_invent_compLinPred, 8},
-    {"_invent_bodyMCMC", (DL_FUNC) &_invent_bodyMCMC, 13},
+    {"_invent_bodyMCMC", (DL_FUNC) &_invent_bodyMCMC, 15},
     {NULL, NULL, 0}
 };
 
