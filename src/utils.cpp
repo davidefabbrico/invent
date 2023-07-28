@@ -250,7 +250,7 @@ arma::vec compLinPred(int nobs, int p, arma::vec cd, double eta0, arma::mat X_l,
 
 // Body MCMC
 // [[Rcpp::export]]
-List bodyMCMC(arma::vec y, int p, int nobs, arma::vec cd, arma::vec d, arma::mat X_l, arma::mat X_nl, arma::vec hyperpar, arma::vec mht, int iter, int burnin, int thin, int ha) {
+List bodyMCMC(arma::vec y, int p, int nobs, arma::vec cd, arma::vec d, arma::mat X_l, arma::mat X_nl, arma::vec hyperpar, arma::vec mht, int iter, int burnin, int thin, int ha, arma::mat X_val = NULL) {
   // Time 
   auto start = std::chrono::high_resolution_clock::now();
   ////////////////////////////////////////////////////
@@ -493,6 +493,12 @@ List bodyMCMC(arma::vec y, int p, int nobs, arma::vec cd, arma::vec d, arma::mat
   double alpha_0_bar;
   double xi_star;
   arma::vec xi_starnl;
+  // Predictive
+  arma::mat X_val_l = X_val.cols(span(0, p-1));
+  arma::mat X_val_nl = X_val.cols(span(p, p+q-1));
+  // store y_tilde
+  int n_val = X_val_l.n_rows;
+  arma::mat Y_TILDE(nout, n_val);
   ////////////////////////////////////////////////////
   //////////////////// Start MCMC ////////////////////
   ///////////////////////////////////////////////////
@@ -991,6 +997,38 @@ List bodyMCMC(arma::vec y, int p, int nobs, arma::vec cd, arma::vec d, arma::mat
     sigma = update_sigmaC(y, eta_pl, hyperpar(2), hyperpar(3), nobs);
     // log-likelihood
     double logLik = arma::accu(dnormLogVec(y, eta_pl, sqrt(sigma)));
+    // predictive
+    arma::mat alpha_val_l(n_val,p);
+    arma::mat alpha_val_nl(n_val,p);
+    arma::mat beta_val_l(n_val,p);
+    arma::mat beta_val_nl(n_val,q);
+    arma::vec eta_pl_val(n_val);
+    arma::vec y_tilde(n_val);
+    if (X_val != NULL) {
+      // compute alpha linear
+      for (int j = 0; j<p; j++) {
+        alpha_val_l.col(j) = alpha_0_l(j)*vecOnes;
+        for (int k = (j+1); k<p; k++) {
+          alpha_val_l.col(j) = alpha_val_l.col(j) + X_val_l.col(k)*omega_l(j,k);
+        }
+      }
+      // compute alpha non linear
+      for (int j = 0; j<p; j++) {
+        alpha_val_nl.col(j) = alpha_0_nl(j)*vecOnes;
+        for (int k = (j+1); k<p; k++) {
+          alpha_val_nl.col(j) = alpha_val_nl.col(j) + X_val_nl.cols(span(cd[k], cd[k+1]-1))*omega_nl(j, span(cd[k], cd[k+1]-1)).t();
+        }
+      }
+      // beta linear and non linear
+      for (int j = 0; j<p; j++) {
+        beta_val_l.col(j) = alpha_val_l.col(j)*xi_l(j);
+        beta_val_nl.cols(span(cd[j], cd[j+1]-1)) = alpha_val_nl.col(j)*xi_nl(span(cd[j], cd[j+1]-1)).t();
+      }
+      // compute linear predictor
+      eta_pl_val = compLinPred(n_val, p, cd, eta0, X_val_l, beta_val_l, X_val_nl, beta_val_nl);
+      // y_tilde
+      y_tilde = rnorm(1, eta_pl_val, sqrt(sigma));
+    }
     // store resutls
     if(t%thin == 0 && t > burnin-1) { // we start from 0
       PI_S_l(idx) = pi_star_l;
@@ -1027,6 +1065,7 @@ List bodyMCMC(arma::vec y, int p, int nobs, arma::vec cd, arma::vec d, arma::mat
       ALPHA_0_nl.row(idx) = alpha_0_nl.t();
       ALPHA_l[idx] = alpha_l;
       ALPHA_nl[idx] = alpha_nl;
+      Y_TILDE.row(idx) = y_tilde;
       idx = idx + 1;
     }
   } // end iteration

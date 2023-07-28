@@ -3,9 +3,9 @@
 #' @export
 
 ##### ------------------------------------------------------------------ ######
-invMCMC <- function(y, x, hyperpar = c(5, 25, 5, 5, 0.00025, 0.4, 1.6, 0.2, 1.8), 
+invMCMC <- function(y, x, x_val, hyperpar = c(5, 25, 5, 5, 0.00025, 0.4, 1.6, 0.2, 1.8), 
                    mht = c(1.4, 0.8, 1, 0.3, 0.7, 0.4, 4, 2.5), 
-                   rank = 0.95, iter = 10000, burnin = iter/2, thin = 5, ha = 2) {
+                   rank = 0.95, iter = 10000, burnin = iter/2, thin = 5, ha = 2, n_val=100) {
 
   result <- NULL
   #useful quantities
@@ -28,11 +28,14 @@ invMCMC <- function(y, x, hyperpar = c(5, 25, 5, 5, 0.00025, 0.4, 1.6, 0.2, 1.8)
     d[j] <- dim(xjtilde)[2]
   }
   cd <- c(0, cumsum(d))
+  x_val <- cbind(X_l[(nobs-n_val+1):nobs,], X_nl[(nobs-n_val+1):nobs,])
+  X_l <- X_l[1:(nobs-n_val),]
+  X_nl <- X_nl[1:(nobs-n_val),]
   
   result = bodyMCMC(as.vector(y), as.integer(p), as.integer(nobs), as.vector(cd), 
                     as.vector(d), as.matrix(X_l), as.matrix(X_nl), 
                     as.vector(hyperpar), as.vector(mht), as.integer(iter), 
-                    as.integer(burnin), as.integer(thin), ha)
+                    as.integer(burnin), as.integer(thin), ha, as.matrix(x_val))
   
   res <- result
   
