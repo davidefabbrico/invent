@@ -569,6 +569,8 @@ List bodyMCMC(arma::vec y, int p, int nobs, arma::vec cd, arma::vec d, arma::mat
             xi_star_l(j,k) = uxsl[0];
             int xiSacc = uxsl[1];
             xi_star_l_acc(j,k) = xi_star_l_acc(j,k) + xiSacc;
+          } else {
+            gamma_star_l(j,k) = hyperpar(4);
           }
         }
         
@@ -674,8 +676,6 @@ List bodyMCMC(arma::vec y, int p, int nobs, arma::vec cd, arma::vec d, arma::mat
           xi_star_l(j,k) = uxsl[0];
           int xiSacc = uxsl[1];
           xi_star_l_acc(j,k) = xi_star_l_acc(j,k) + xiSacc;
-        } else {
-          gamma_star_l(j,k) = hyperpar(4);
         }
       } // end linear k
     } // end linear j
@@ -733,6 +733,8 @@ List bodyMCMC(arma::vec y, int p, int nobs, arma::vec cd, arma::vec d, arma::mat
             xi_star_nl(j, span(cd[k], cd[k+1]-1)) = resultXiSnl;
             arma::rowvec accxisnl = uxsnl[1];
             xi_star_nl_acc(j, span(cd[k], cd[k+1]-1)) = xi_star_nl_acc(j, span(cd[k], cd[k+1]-1)) + accxisnl;
+          } else {
+            gamma_star_nl(j,k) = hyperpar(4);
           }
         }
         
@@ -840,8 +842,6 @@ List bodyMCMC(arma::vec y, int p, int nobs, arma::vec cd, arma::vec d, arma::mat
           xi_star_nl(j, span(cd[k], cd[k+1]-1)) = resultXiSnl;
           arma::rowvec accxisnl = uxsnl[1];
           xi_star_nl_acc(j, span(cd[k], cd[k+1]-1)) = xi_star_nl_acc(j, span(cd[k], cd[k+1]-1)) + accxisnl;
-        } else {
-          gamma_star_nl(j,k) = hyperpar(4);
         }
       } // end non linear k
     } // end non linear j
