@@ -624,8 +624,8 @@ List bodyMCMC(arma::vec y, int p, int nobs, arma::vec cd, arma::vec d, arma::mat
             int xiSacc = uxsl[1];
             xi_star_l_acc(j,k) = xi_star_l_acc(j,k) + xiSacc;
           } else {
-          gamma_star_l(j,k) = hyperpar(4);
-        }
+            gamma_star_l(j,k) = hyperpar(4);
+          }
         }
         
         if (ha == 0) {
