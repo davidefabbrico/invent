@@ -4,6 +4,7 @@
 #include <Rmath.h>
 #include <stdlib.h> 
 #include <chrono>
+#include <fstream>
 
 using namespace Rcpp;
 using namespace arma;
@@ -1124,9 +1125,9 @@ List bodyMCMC(arma::vec y, int p, int nobs, arma::vec cd, arma::vec d, arma::mat
                       // Named("acc_xi_s_nl") = xi_star_nl_acc/iter,
                       // Named("acc_a_0_l") = alpha_0_l_acc/iter, 
                       // Named("acc_a_0_nl") = alpha_0_nl_acc/iter, 
-                      Named("acc_xi_l") = xi_l_acc/iter, 
-                      Named("acc_xi_nl") = xi_nl_acc/iter,
+                      // Named("acc_xi_l") = xi_l_acc/iter, 
+                      // Named("acc_xi_nl") = xi_nl_acc/iter,
                       Named("y_oos") = Y_TILDE,
-                      Named("Execution Time") = duration/1000000
+                      Named("Execution_Time") = duration/1000000
   );
 }

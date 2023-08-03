@@ -7,7 +7,6 @@
 invMCMC(
   y,
   x,
-  x_val,
   hyperpar = c(5, 25, 5, 5, 0.00025, 0.4, 1.6, 0.2, 1.8),
   mht = c(1.4, 0.8, 1, 0.3, 0.7, 0.4, 4, 2.5),
   rank = 0.95,
@@ -16,7 +15,8 @@ invMCMC(
   thin = 5,
   ha = 2,
   n_val = 100,
-  pred = TRUE
+  pred = TRUE,
+  detail = FALSE
 )
 }
 \description{
