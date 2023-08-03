@@ -5,7 +5,7 @@
 ##### ------------------------------------------------------------------ ######
 invMCMC <- function(y, x, hyperpar = c(5, 25, 5, 5, 0.00025, 0.4, 1.6, 0.2, 1.8), 
                    mht = c(1.4, 0.8, 1, 0.3, 0.7, 0.4, 4, 2.5), 
-                   rank = 0.95, iter = 10000, burnin = iter/2, thin = 5, ha = 2, n_val=100, pred = TRUE, 
+                   rank = 0.95, iter = 10000, burnin = iter/2, thin = 5, ha = 2, n_val = 100, pred = TRUE, 
                    detail = FALSE, data = NULL) {
   
   result <- NULL
@@ -158,8 +158,9 @@ invMCMC <- function(y, x, hyperpar = c(5, 25, 5, 5, 0.00025, 0.4, 1.6, 0.2, 1.8)
                   execution_time = execution_time)
     } else {
       # return tpr, fpr, matt
-      res <- list(linear_predictor = yhat, y_OutSample = y_tilde, LogLikelihood = ll, mse_inSample = mse_is, 
-                  mse_outSample = mse_os, tpr = tpr, fpr = fpr, 
+      res <- list(linear_predictor = yhat, y_OutSample = y_tilde, 
+                  LogLikelihood = ll, mse_inSample = mse_is, 
+                  mse_outSample = mse_os, tpr = tpr, fpr = fpr,
                   matt = matt, execution_time = execution_time)
     }
   }
