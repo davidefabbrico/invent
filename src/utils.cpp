@@ -4,7 +4,6 @@
 #include <Rmath.h>
 #include <stdlib.h> 
 #include <chrono>
-#include <fstream>
 
 using namespace Rcpp;
 using namespace arma;

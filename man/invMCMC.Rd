@@ -16,7 +16,8 @@ invMCMC(
   ha = 2,
   n_val = 100,
   pred = TRUE,
-  detail = FALSE
+  detail = FALSE,
+  data = NULL
 )
 }
 \description{
