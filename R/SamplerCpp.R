@@ -3,7 +3,7 @@
 #' @export
 
 ##### ------------------------------------------------------------------ ######
-invMCMC <- function(y, x, hyperpar = c(5, 25, 5, 5, 0.00025, 0.4, 1.6, 0.2, 1.8), 
+invMCMC <- function(y, x, hyperpar = c(5, 25, 5, 5, 0.00025, 0.2, 1.8, 0.1, 1.9), 
                    mht = c(1.4, 0.8, 1, 0.3, 0.7, 0.4, 4, 2.5), 
                    rank = 0.95, iter = 10000, burnin = iter/2, thin = 5, ha = 2, n_val = 100, pred = TRUE, 
                    detail = FALSE, data = NULL) {
@@ -94,8 +94,8 @@ invMCMC <- function(y, x, hyperpar = c(5, 25, 5, 5, 0.00025, 0.4, 1.6, 0.2, 1.8)
     # table linear main effect
     tab_MainLinear <- matrix(table(sel_MainLinear, true_MainLinear), nrow = 2, ncol = 2)
     matt_MainLinear <- mcc(confusionM = tab_MainLinear)
-    tpr_MainLinear <- tab_MainLinear[1,1]/sum(tab_MainLinear[,1]) 
-    fpr_MainLinear <- tab_MainLinear[1,2]/sum(tab_MainLinear[,2])
+    tpr_MainLinear <- tab_MainLinear[2,2]/sum(tab_MainLinear[,2]) 
+    fpr_MainLinear <- tab_MainLinear[2,1]/sum(tab_MainLinear[,1])
     ############### Non linear main effect ###################
     # selected by the model
     sel_MainNonLinear <- factor(as.numeric(mppi_MainNonLinear > 0.5), levels = c(0,1))
@@ -104,8 +104,8 @@ invMCMC <- function(y, x, hyperpar = c(5, 25, 5, 5, 0.00025, 0.4, 1.6, 0.2, 1.8)
     # table linear main effect
     tab_MainNonLinear <- matrix(table(sel_MainNonLinear, true_MainNonLinear), nrow = 2, ncol = 2)
     matt_MainNonLinear <- mcc(confusionM = tab_MainNonLinear)
-    tpr_MainNonLinear <- tab_MainNonLinear[1,1]/sum(tab_MainNonLinear[,1]) 
-    fpr_MainNonLinear <- tab_MainNonLinear[1,2]/sum(tab_MainNonLinear[,2])
+    tpr_MainNonLinear <- tab_MainNonLinear[2,2]/sum(tab_MainNonLinear[,2]) 
+    fpr_MainNonLinear <- tab_MainNonLinear[2,1]/sum(tab_MainNonLinear[,1])
     ############### Linear Interaction effect ###################
     sel_IntLinear <- mppi_IntLinear > 0.5
     sel_IntLinear[sel_IntLinear == TRUE] = 1
@@ -115,8 +115,8 @@ invMCMC <- function(y, x, hyperpar = c(5, 25, 5, 5, 0.00025, 0.4, 1.6, 0.2, 1.8)
     Vec_true_IntLinear <- true_IntLinear[upper.tri(true_IntLinear)]
     tab_IntLinear <- matrix(table(Vec_sel_IntLinear, Vec_true_IntLinear), nrow = 2, ncol = 2)
     matt_IntLinear <- mcc(confusionM = tab_IntLinear)
-    tpr_IntLinear <- tab_IntLinear[1,1]/sum(tab_IntLinear[,1]) 
-    fpr_IntLinear <- tab_IntLinear[1,2]/sum(tab_IntLinear[,2])
+    tpr_IntLinear <- tab_IntLinear[2,2]/sum(tab_IntLinear[,2]) 
+    fpr_IntLinear <- tab_IntLinear[2,1]/sum(tab_IntLinear[,1])
     ############### Non linear Interaction effect ###################
     sel_IntNonLinear <- mppi_IntNonLinear > 0.5
     sel_IntNonLinear[sel_IntNonLinear == TRUE] = 1
@@ -133,16 +133,18 @@ invMCMC <- function(y, x, hyperpar = c(5, 25, 5, 5, 0.00025, 0.4, 1.6, 0.2, 1.8)
     Vec_true_IntNonLinear <- true_IntNonLinear[upper.tri(true_IntNonLinear)]
     tab_IntNonLinear <- matrix(table(Vec_sel_IntNonLinear, Vec_true_IntNonLinear), nrow = 2, ncol = 2)
     matt_IntNonLinear <- mcc(confusionM = tab_IntNonLinear)
-    tpr_IntNonLinear <- tab_IntNonLinear[1,1]/sum(tab_IntNonLinear[,1]) 
-    fpr_IntNonLinear <- tab_IntNonLinear[1,2]/sum(tab_IntNonLinear[,2])
+    tpr_IntNonLinear <- tab_IntNonLinear[2,2]/sum(tab_IntNonLinear[,2]) 
+    fpr_IntNonLinear <- tab_IntNonLinear[2,1]/sum(tab_IntNonLinear[,1])
     # Total metric
-    selectInd <- c(as.numeric(sel_MainLinear)-1, as.numeric(sel_MainNonLinear)-1, Vec_sel_IntLinear , Vec_sel_IntNonLinear)
-    trueInd <- c(as.numeric(true_MainLinear)-1, as.numeric(true_MainNonLinear)-1, Vec_true_IntLinear, Vec_true_IntNonLinear)
+    selectInd <- c(as.numeric(sel_MainLinear)-1, as.numeric(sel_MainNonLinear)-1, 
+                   Vec_sel_IntLinear , Vec_sel_IntNonLinear)
+    trueInd <- c(as.numeric(true_MainLinear)-1, as.numeric(true_MainNonLinear)-1, 
+                 Vec_true_IntLinear, Vec_true_IntNonLinear)
     ##########  aggregate
     contTable <- matrix(table(selectInd, trueInd), nrow = 2, ncol = 2)
     matt <- mcc(confusionM = contTable)
-    tpr <- contTable[1,1]/sum(contTable[,1]) 
-    fpr <- contTable[1,2]/sum(contTable[,2]) 
+    tpr <- contTable[2,2]/sum(contTable[,2]) 
+    fpr <- contTable[2,1]/sum(contTable[,1]) 
   }
   # exexution time
   execution_time <- result$Execution_Time
@@ -152,10 +154,10 @@ invMCMC <- function(y, x, hyperpar = c(5, 25, 5, 5, 0.00025, 0.4, 1.6, 0.2, 1.8)
     res <- result
   } else {
     if (is.null(data)) {
-      res <- list(linear_predictor = yhat, y_OutSample = y_tilde, LogLikelihood = ll, mse_inSample = mse_is, 
-                  mse_outSample = mse_os, mppi_MainLinear = mppi_MainLinear, mppi_MainNonLinear = mppi_MainNonLinear, 
-                  mppi_IntLinear = mppi_IntLinear, mppi_IntNonLinear = mppi_IntNonLinear, 
-                  execution_time = execution_time)
+      res <- list(linear_predictor = yhat, y_OutSample = y_tilde, LogLikelihood = ll, 
+                  mse_inSample = mse_is, mse_outSample = mse_os, mppi_MainLinear = mppi_MainLinear, 
+                  mppi_MainNonLinear = mppi_MainNonLinear, mppi_IntLinear = mppi_IntLinear, 
+                  mppi_IntNonLinear = mppi_IntNonLinear, execution_time = execution_time)
     } else {
       # return tpr, fpr, matt
       res <- list(linear_predictor = yhat, y_OutSample = y_tilde, 
