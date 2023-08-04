@@ -3,7 +3,7 @@
 #' @export
 
 ##### ------------------------------------------------------------------ ######
-invMCMC <- function(y, x, hyperpar = c(5, 25, 5, 5, 0.00025, 0.2, 1.8, 0.1, 1.9), 
+invMCMC <- function(y, x, hyperpar = c(5, 25, 5, 5, 0.00025, 0.4, 1.6, 0.2, 1.8, 0.4, 1.6, 0.2, 1.8), 
                    mht = c(1.4, 0.8, 1, 0.3, 0.7, 0.4, 4, 2.5), 
                    rank = 0.95, iter = 10000, burnin = iter/2, thin = 5, ha = 2, n_val = 100, pred = TRUE, 
                    detail = FALSE, data = NULL) {
@@ -52,19 +52,17 @@ invMCMC <- function(y, x, hyperpar = c(5, 25, 5, 5, 0.00025, 0.2, 1.8, 0.1, 1.9)
   gammaStarLin <- array(unlist(result$gamma_star_l), dim = c(p, p, nout))
   gammaStarNLin <- array(unlist(result$gamma_star_nl), dim = c(p, p, nout))
   # gamma 0 linear
-  gamma0Lin <- result$gamma_0_l[-c(1:burnin),]
+  gamma0Lin <- result$gamma_0_l
   mppi_MainLinear <- apply(gamma0Lin, 2, mean)
   # gamma 0 non linear
-  gamma0NLin <- result$gamma_0_nl[-c(1:burnin),]
+  gamma0NLin <- result$gamma_0_nl
   mppi_MainNonLinear <- apply(gamma0NLin, 2, mean)
   # gamma star linear (list of matrix)
-  gammaStarLin <- gammaStarLin[,,-c(1:burnin)]
   mppi_IntLinear <- apply(gammaStarLin, c(1,2), mean)
   # gamma star non linear
-  gammaStarNLin <- gammaStarNLin[,,-c(1:burnin)]
   mppi_IntNonLinear <- apply(gammaStarNLin, c(1,2), mean)
   # linear predictor
-  lp_is <- result$linear_predictor[-c(1:burnin),]
+  lp_is <- result$linear_predictor
   yhat <- apply(lp_is, 2, mean)
   # mean square error
   mse_is <- mse(yhat, y)

@@ -513,9 +513,9 @@ List bodyMCMC(arma::vec y, int p, int nobs, arma::vec cd, arma::vec d, arma::mat
   
   for (int t = 0; t<iter; t++) {
     // update pi start linear
-    pi_star_l = update_piSC(hyperpar(5), hyperpar(6), gamma_star_l, hyperpar(4));
+    pi_star_l = update_piSC(hyperpar(9), hyperpar(10), gamma_star_l, hyperpar(4));
     // update pi start non linear
-    pi_star_nl = update_piSC(hyperpar(7), hyperpar(8), gamma_star_nl, hyperpar(4));
+    pi_star_nl = update_piSC(hyperpar(11), hyperpar(12), gamma_star_nl, hyperpar(4));
     //////////////////// effect modifiers linear peNMIG ////////////////////
     for (int j = 0; j<p; j++) {
       for (int k = (j+1); k<p; k++) {
