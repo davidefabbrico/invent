@@ -47,11 +47,6 @@ invMCMC <- function(y, x, hyperpar = c(5, 25, 5, 5, 0.00025, 0.2, 1.8, 0.1, 1.9)
                     as.vector(hyperpar), as.vector(mht), as.integer(iter), 
                     as.integer(burnin), as.integer(thin), ha, as.matrix(x_val), as.integer(pred))
   
-  if (is.null(data)) {
-    print("End of MCMC... MPPI Evaluation")
-  } else {
-    print("End of MCMC... Metric Evaluation")
-  }
   nout <- (iter-burnin)/thin
   # Compute the main metrics
   gammaStarLin <- array(unlist(result$gamma_star_l), dim = c(p, p, nout))
@@ -154,16 +149,30 @@ invMCMC <- function(y, x, hyperpar = c(5, 25, 5, 5, 0.00025, 0.2, 1.8, 0.1, 1.9)
     res <- result
   } else {
     if (is.null(data)) {
-      res <- list(linear_predictor = yhat, y_OutSample = y_tilde, LogLikelihood = ll, 
-                  mse_inSample = mse_is, mse_outSample = mse_os, mppi_MainLinear = mppi_MainLinear, 
-                  mppi_MainNonLinear = mppi_MainNonLinear, mppi_IntLinear = mppi_IntLinear, 
-                  mppi_IntNonLinear = mppi_IntNonLinear, execution_time = execution_time)
+      if (pred) {
+        res <- list(linear_predictor = yhat, y_OutSample = y_tilde, LogLikelihood = ll, 
+                    mse_inSample = mse_is, mse_outSample = mse_os, mppi_MainLinear = mppi_MainLinear, 
+                    mppi_MainNonLinear = mppi_MainNonLinear, mppi_IntLinear = mppi_IntLinear, 
+                    mppi_IntNonLinear = mppi_IntNonLinear, execution_time = execution_time)
+      } else {
+        res <- list(linear_predictor = yhat, LogLikelihood = ll, 
+                    mse = mse_is, mppi_MainLinear = mppi_MainLinear, 
+                    mppi_MainNonLinear = mppi_MainNonLinear, mppi_IntLinear = mppi_IntLinear, 
+                    mppi_IntNonLinear = mppi_IntNonLinear, execution_time = execution_time)
+      }
     } else {
-      # return tpr, fpr, matt
-      res <- list(linear_predictor = yhat, y_OutSample = y_tilde, 
-                  LogLikelihood = ll, mse_inSample = mse_is, 
-                  mse_outSample = mse_os, tpr = tpr, fpr = fpr,
-                  matt = matt, execution_time = execution_time)
+      if (pred) {
+        # return tpr, fpr, matt
+        res <- list(linear_predictor = yhat, y_OutSample = y_tilde, 
+                    LogLikelihood = ll, mse_inSample = mse_is, 
+                    mse_outSample = mse_os, tpr = tpr, fpr = fpr,
+                    matt = matt, execution_time = execution_time)
+      } else {
+        # return tpr, fpr, matt
+        res <- list(linear_predictor = yhat, 
+                    LogLikelihood = ll, mse = mse_is, tpr = tpr, fpr = fpr,
+                    matt = matt, execution_time = execution_time)
+      }
     }
   }
   
