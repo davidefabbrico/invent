@@ -510,7 +510,6 @@ List bodyMCMC(arma::vec y, int p, int nobs, arma::vec cd, arma::vec d, arma::mat
   ////////////////////////////////////////////////////
   //////////////////// Start MCMC ////////////////////
   ///////////////////////////////////////////////////
-  
   for (int t = 0; t<iter; t++) {
     // update pi start linear
     pi_star_l = update_piSC(hyperpar(9), hyperpar(10), gamma_star_l, hyperpar(4));
