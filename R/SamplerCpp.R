@@ -3,9 +3,9 @@
 #' @export
 
 ##### ------------------------------------------------------------------ ######
-invMCMC <- function(y, x, hyperpar = c(5, 25, 5, 5, 0.00025, 0.4, 1.6, 0.2, 1.8, 0.4, 1.6, 0.2, 1.8), 
+invMCMC <- function(y, x, y_val = NULL, x_val = NULL, hyperpar = c(5, 25, 5, 5, 0.00025, 0.4, 1.6, 0.2, 1.8, 0.4, 1.6, 0.2, 1.8), 
                    mht = c(1.4, 0.8, 1, 0.3, 0.7, 0.4, 4, 2.5), 
-                   rank = 0.95, iter = 10000, burnin = iter/2, thin = 5, ha = 2, n_val = 100, pred = TRUE, 
+                   rank = 0.95, iter = 10000, burnin = iter/2, thin = 5, ha = 2, 
                    detail = FALSE, data = NULL) {
   
   result <- NULL
@@ -30,22 +30,33 @@ invMCMC <- function(y, x, hyperpar = c(5, 25, 5, 5, 0.00025, 0.4, 1.6, 0.2, 1.8,
   }
   cd <- c(0, cumsum(d))
   q <- sum(d)
-  if (pred) {
-    # y
-    y_val <- y[(nobs-n_val+1):nobs]
-    y <- y[1:(nobs-n_val)]
-    # x
-    x_val <- cbind(X_l[(nobs-n_val+1):nobs,], X_nl[(nobs-n_val+1):nobs,])
-    X_l <- X_l[1:(nobs-n_val),]
-    X_nl <- X_nl[1:(nobs-n_val),]
-    nobs = nobs - n_val
-  } else {
-    x_val <- matrix(0, nrow = n_val, ncol = p+q)
+
+  # Prediction
+  # build our basis p spline representation
+  X_val <- vector()
+  X_val_l <- vector()
+  X_val_nl <- vector()
+  d_val <- vector()
+  cd_val <- 0
+  q_val <- 0
+  if (!is.null(y_val)) {
+    for(j in 1:p) {
+      xj_val <- x_val[,j]
+      X_val <- cbind(X_val, xj_val)
+      xjl_val <- lin(xj_val)
+      X_val_l <- cbind(X_val_l, xjl_val)
+      xjtilde_val <- sm(x = xj_val, rankZ = rank) 
+      X_val_nl <- cbind(X_val_nl, xjtilde_val)
+      d_val[j] <- dim(xjtilde_val)[2]
+    }
+    cd_val <- c(0, cumsum(d_val))
+    q_val <- sum(d_val)
   }
-  result = bodyMCMC(as.vector(y), as.integer(p), as.integer(nobs), as.vector(cd), 
-                    as.vector(d), as.matrix(X_l), as.matrix(X_nl), 
+  
+  result = bodyMCMC(as.vector(y), as.integer(p), as.integer(nobs), as.vector(cd), as.vector(cd_val),
+                    as.vector(d), as.vector(d_val), as.matrix(X_l), as.matrix(X_nl), as.matrix(X_val_l), as.matrix(X_val_nl),
                     as.vector(hyperpar), as.vector(mht), as.integer(iter), 
-                    as.integer(burnin), as.integer(thin), ha, as.matrix(x_val), as.integer(pred))
+                    as.integer(burnin), as.integer(thin), ha)
   
   nout <- (iter-burnin)/thin
   # Compute the main metrics
@@ -69,7 +80,7 @@ invMCMC <- function(y, x, hyperpar = c(5, 25, 5, 5, 0.00025, 0.4, 1.6, 0.2, 1.8,
   # log-likelihood
   ll <- result$LogLikelihood
   # prediction
-  if (pred) {
+  if (!is.null(y_val)) {
     lp_os <- result$y_oos
     y_tilde <- apply(lp_os, 2, mean)
     mse_os <- mse(y_tilde, y_val)
@@ -147,7 +158,7 @@ invMCMC <- function(y, x, hyperpar = c(5, 25, 5, 5, 0.00025, 0.4, 1.6, 0.2, 1.8,
     res <- result
   } else {
     if (is.null(data)) {
-      if (pred) {
+      if (is.null(y_val)) {
         res <- list(linear_predictor = yhat, y_OutSample = y_tilde, LogLikelihood = ll, 
                     mse_inSample = mse_is, mse_outSample = mse_os, mppi_MainLinear = mppi_MainLinear, 
                     mppi_MainNonLinear = mppi_MainNonLinear, mppi_IntLinear = mppi_IntLinear, 
@@ -159,7 +170,7 @@ invMCMC <- function(y, x, hyperpar = c(5, 25, 5, 5, 0.00025, 0.4, 1.6, 0.2, 1.8,
                     mppi_IntNonLinear = mppi_IntNonLinear, execution_time = execution_time)
       }
     } else {
-      if (pred) {
+      if (is.null(y_val)) {
         # return tpr, fpr, matt
         res <- list(linear_predictor = yhat, y_OutSample = y_tilde, 
                     LogLikelihood = ll, mse_inSample = mse_is, 

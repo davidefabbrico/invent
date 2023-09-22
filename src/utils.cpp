@@ -250,7 +250,7 @@ arma::vec compLinPred(int nobs, int p, arma::vec cd, double eta0, arma::mat X_l,
 
 // Body MCMC
 // [[Rcpp::export]]
-List bodyMCMC(arma::vec y, int p, int nobs, arma::vec cd, arma::vec d, arma::mat X_l, arma::mat X_nl, arma::vec hyperpar, arma::vec mht, int iter, int burnin, int thin, int ha, arma::mat X_val, bool pred = true) {
+List bodyMCMC(arma::vec y, int p, int nobs, arma::vec cd, arma::vec cd_val, arma::vec d, arma::vec d_val, arma::mat X_l, arma::mat X_nl, arma::mat X_val_l, arma::mat X_val_nl, arma::vec hyperpar, arma::vec mht, int iter, int burnin, int thin, int ha) {
   // Time 
   auto start = std::chrono::high_resolution_clock::now();
   ////////////////////////////////////////////////////
@@ -260,6 +260,8 @@ List bodyMCMC(arma::vec y, int p, int nobs, arma::vec cd, arma::vec d, arma::mat
   // wh = 1
   // sh = 2
   int q = arma::accu(d);
+  int q_val = arma::accu(d_val);
+  // int q_val = arma::accu(d_val);
   arma::vec vecOnes = ones(nobs, 1);
   // pi star linear 
   double pi_star_l = R::rbeta(1,1);
@@ -466,9 +468,6 @@ List bodyMCMC(arma::vec y, int p, int nobs, arma::vec cd, arma::vec d, arma::mat
   double alpha_0_bar;
   double xi_star;
   arma::vec xi_starnl;
-  // store y_tilde
-  arma::mat X_val_l = X_val.cols(span(0, p-1));
-  arma::mat X_val_nl = X_val.cols(span(p, p+q-1));
   // Predictive
   int n_val = X_val_l.n_rows;
   arma::mat Y_TILDE(nout, n_val);
@@ -476,7 +475,7 @@ List bodyMCMC(arma::vec y, int p, int nobs, arma::vec cd, arma::vec d, arma::mat
   arma::mat alpha_val_l(n_val, p);
   arma::mat alpha_val_nl(n_val, p);
   arma::mat beta_val_l(n_val, p);
-  arma::mat beta_val_nl(n_val, q);
+  arma::mat beta_val_nl(n_val, q_val);
   arma::vec eta_pl_val(n_val);
   arma::vec y_tilde(n_val);
   arma::vec vecOnesVal = ones(n_val, 1);
@@ -511,6 +510,8 @@ List bodyMCMC(arma::vec y, int p, int nobs, arma::vec cd, arma::vec d, arma::mat
             for (int kn = (j+1); kn<p; kn++) {
               alpha_l_tmp.col(j) = alpha_l_tmp.col(j) + X_l.col(kn)*omega_l_tmp(j,kn);
             }
+            // IMPORTANTE: calcolo di alpha
+            // ??? alpha_l_tmp.col(j) = alpha_0_l(j)*vecOnes +  X_l.cols(k, X_l.n_cols - 1)*omega_l_tmp(j, span(k, omega_l_tmp.n_cols - 1)).t();
             beta_l_tmp = beta_l;
             // compute linear beta
             beta_l_tmp.col(j) = alpha_l_tmp.col(j)*xi_l(j);
@@ -1022,7 +1023,7 @@ List bodyMCMC(arma::vec y, int p, int nobs, arma::vec cd, arma::vec d, arma::mat
       ALPHA_0_nl.row(idx) = alpha_0_nl.t();
       ALPHA_l[idx] = alpha_l;
       ALPHA_nl[idx] = alpha_nl;
-      if (pred == true) {
+      if (n_val != 0) {
         // compute alpha linear
         for (int j = 0; j<p; j++) {
           alpha_val_l.col(j) = alpha_0_l(j)*vecOnesVal;
@@ -1034,16 +1035,16 @@ List bodyMCMC(arma::vec y, int p, int nobs, arma::vec cd, arma::vec d, arma::mat
         for (int j = 0; j<p; j++) {
           alpha_val_nl.col(j) = alpha_0_nl(j)*vecOnesVal;
           for (int k = (j+1); k<p; k++) {
-            alpha_val_nl.col(j) = alpha_val_nl.col(j) + X_val_nl.cols(span(cd[k], cd[k+1]-1))*omega_nl(j, span(cd[k], cd[k+1]-1)).t();
+            alpha_val_nl.col(j) = alpha_val_nl.col(j) + X_val_nl.cols(span(cd_val[k], cd_val[k+1]-1))*omega_nl(j, span(cd_val[k], cd_val[k+1]-1)).t();
           }
         }
         // beta linear and non linear
         for (int j = 0; j<p; j++) {
           beta_val_l.col(j) = alpha_val_l.col(j)*xi_l(j);
-          beta_val_nl.cols(span(cd[j], cd[j+1]-1)) = alpha_val_nl.col(j)*xi_nl(span(cd[j], cd[j+1]-1)).t();
+          beta_val_nl.cols(span(cd_val[j], cd_val[j+1]-1)) = alpha_val_nl.col(j)*xi_nl(span(cd_val[j], cd_val[j+1]-1)).t();
         }
         // compute linear predictor
-        eta_pl_val = compLinPred(n_val, p, cd, eta0, X_val_l, beta_val_l, X_val_nl, beta_val_nl);
+        eta_pl_val = compLinPred(n_val, p, cd_val, eta0, X_val_l, beta_val_l, X_val_nl, beta_val_nl);
         // y_tilde
         for (int i = 0; i<n_val; i++) {
           y_tilde(i) = R::rnorm(eta_pl_val(i), sqrt(sigma));
