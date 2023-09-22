@@ -53,10 +53,14 @@ invMCMC <- function(y, x, y_val = NULL, x_val = NULL, hyperpar = c(5, 25, 5, 5, 
     q_val <- sum(d_val)
   }
   
+
+  # Call the C++ function
   result = bodyMCMC(as.vector(y), as.integer(p), as.integer(nobs), as.vector(cd), as.vector(cd_val),
                     as.vector(d), as.vector(d_val), as.matrix(X_l), as.matrix(X_nl), as.matrix(X_val_l), as.matrix(X_val_nl),
                     as.vector(hyperpar), as.vector(mht), as.integer(iter), 
                     as.integer(burnin), as.integer(thin), ha)
+
+
   
   nout <- (iter-burnin)/thin
   # Compute the main metrics
@@ -158,7 +162,7 @@ invMCMC <- function(y, x, y_val = NULL, x_val = NULL, hyperpar = c(5, 25, 5, 5, 
     res <- result
   } else {
     if (is.null(data)) {
-      if (is.null(y_val)) {
+      if (!is.null(y_val)) {
         res <- list(linear_predictor = yhat, y_OutSample = y_tilde, LogLikelihood = ll, 
                     mse_inSample = mse_is, mse_outSample = mse_os, mppi_MainLinear = mppi_MainLinear, 
                     mppi_MainNonLinear = mppi_MainNonLinear, mppi_IntLinear = mppi_IntLinear, 
@@ -170,7 +174,7 @@ invMCMC <- function(y, x, y_val = NULL, x_val = NULL, hyperpar = c(5, 25, 5, 5, 
                     mppi_IntNonLinear = mppi_IntNonLinear, execution_time = execution_time)
       }
     } else {
-      if (is.null(y_val)) {
+      if (!is.null(y_val)) {
         # return tpr, fpr, matt
         res <- list(linear_predictor = yhat, y_OutSample = y_tilde, 
                     LogLikelihood = ll, mse_inSample = mse_is, 

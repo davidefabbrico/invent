@@ -51,6 +51,6 @@ data_list <- invent::gendata(n_obs = 200, p = 50, scenario = 4,
 
 # Run the regression model
 out <- invent::invMCMC(y, x, iter = 10000, burnin = 5000, 
-                      thin = 5, ha = 1, data = data_list, pred = FALSE, 
+                      thin = 5, ha = 1, data = data_list, 
                       detail = FALSE)
 ```
