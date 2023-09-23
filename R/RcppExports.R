@@ -69,11 +69,11 @@ mysign <- function(x) {
     .Call(`_invent_mysign`, x)
 }
 
-compLinPred <- function(nobs, p, cd, eta0, X_l, beta_l, X_nl, beta_nl) {
-    .Call(`_invent_compLinPred`, nobs, p, cd, eta0, X_l, beta_l, X_nl, beta_nl)
+compLinPred <- function(nobs, eta0, X_l, beta_l, X_nl, beta_nl) {
+    .Call(`_invent_compLinPred`, nobs, eta0, X_l, beta_l, X_nl, beta_nl)
 }
 
-bodyMCMC <- function(y, p, nobs, cd, cd_val, d, d_val, X_l, X_nl, X_val_l, X_val_nl, hyperpar, mht, iter, burnin, thin, ha) {
-    .Call(`_invent_bodyMCMC`, y, p, nobs, cd, cd_val, d, d_val, X_l, X_nl, X_val_l, X_val_nl, hyperpar, mht, iter, burnin, thin, ha)
+bodyMCMC <- function(y, p, nobs, cd, cd_val, d, d_val, X_l, X_nl, X_val_l, X_val_nl, hyperpar, mht, n_cat, iter, burnin, thin, ha) {
+    .Call(`_invent_bodyMCMC`, y, p, nobs, cd, cd_val, d, d_val, X_l, X_nl, X_val_l, X_val_nl, hyperpar, mht, n_cat, iter, burnin, thin, ha)
 }
 

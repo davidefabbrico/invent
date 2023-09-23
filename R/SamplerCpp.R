@@ -12,6 +12,7 @@ invMCMC <- function(y, x, y_val = NULL, x_val = NULL, hyperpar = c(5, 25, 5, 5, 
   #useful quantities
   nobs <- dim(x)[1] # number of observations
   p <- dim(x)[2] # number of covariates
+  n_cat <- 0
   
   #build our basis p spline representation
   X <- vector()
@@ -21,12 +22,25 @@ invMCMC <- function(y, x, y_val = NULL, x_val = NULL, hyperpar = c(5, 25, 5, 5, 
   
   for(j in 1:p) {
     xj <- x[,j]
-    X <- cbind(X, xj)
-    xjl <- lin(xj)
-    X_l <- cbind(X_l, xjl)
-    xjtilde <- sm(x = xj, rankZ = rank) 
-    X_nl <- cbind(X_nl, xjtilde)
-    d[j] <- dim(xjtilde)[2]
+    unique_value <- length(unique(xj))
+    if (unique_value == length(xj)) {
+      X <- cbind(X, xj)
+      xjl <- lin(xj)
+      X_l <- cbind(X_l, xjl)
+      xjtilde <- sm(x = xj, rankZ = rank) 
+      X_nl <- cbind(X_nl, xjtilde)
+      d[j] <- dim(xjtilde)[2]
+    }       
+  }
+  
+  for(j in 1:p) {
+    xj <- x[,j]
+    unique_value <- length(unique(xj))
+    if (unique_value < length(xj)) {
+      X <- cbind(X, xj)
+      n_cat <- n_cat + 1
+      X_l <- cbind(X_l, xj)
+    }   
   }
   cd <- c(0, cumsum(d))
   q <- sum(d)
@@ -42,30 +56,35 @@ invMCMC <- function(y, x, y_val = NULL, x_val = NULL, hyperpar = c(5, 25, 5, 5, 
   if (!is.null(y_val)) {
     for(j in 1:p) {
       xj_val <- x_val[,j]
+      unique_value_val <- length(unique(xj_val))
       X_val <- cbind(X_val, xj_val)
-      xjl_val <- lin(xj_val)
-      X_val_l <- cbind(X_val_l, xjl_val)
-      xjtilde_val <- sm(x = xj_val, rankZ = rank) 
-      X_val_nl <- cbind(X_val_nl, xjtilde_val)
-      d_val[j] <- dim(xjtilde_val)[2]
+      if (unique_value_val < length(xj_val)) { # strong assumption?
+        xjl_val <- lin(xj_val)
+        X_val_l <- cbind(X_val_l, xj_val)
+      } else {
+        X_val <- cbind(X_val, xj_val)
+        xjl_val <- lin(xj_val)
+        X_val_l <- cbind(X_val_l, xjl_val)
+        xjtilde_val <- sm(x = xj_val, rankZ = rank) 
+        X_val_nl <- cbind(X_val_nl, xjtilde_val)
+        d_val[j] <- dim(xjtilde_val)[2] 
+      }
     }
     cd_val <- c(0, cumsum(d_val))
     q_val <- sum(d_val)
   }
   
-
   # Call the C++ function
   result = bodyMCMC(as.vector(y), as.integer(p), as.integer(nobs), as.vector(cd), as.vector(cd_val),
                     as.vector(d), as.vector(d_val), as.matrix(X_l), as.matrix(X_nl), as.matrix(X_val_l), as.matrix(X_val_nl),
-                    as.vector(hyperpar), as.vector(mht), as.integer(iter), 
+                    as.vector(hyperpar), as.vector(mht), as.integer(n_cat), as.integer(iter), 
                     as.integer(burnin), as.integer(thin), ha)
-
-
   
+  nlp <- p - n_cat
   nout <- (iter-burnin)/thin
   # Compute the main metrics
   gammaStarLin <- array(unlist(result$gamma_star_l), dim = c(p, p, nout))
-  gammaStarNLin <- array(unlist(result$gamma_star_nl), dim = c(p, p, nout))
+  gammaStarNLin <- array(unlist(result$gamma_star_nl), dim = c(nlp, nlp, nout))
   # gamma 0 linear
   gamma0Lin <- result$gamma_0_l
   mppi_MainLinear <- apply(gamma0Lin, 2, mean)
