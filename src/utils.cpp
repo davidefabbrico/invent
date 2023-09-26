@@ -512,6 +512,27 @@ List bodyMCMC(arma::vec y, int p, int nobs, arma::vec cd, arma::vec cd_val, arma
     pi_star_l = update_piSC(hyperpar(5), hyperpar(6), gamma_star_l, hyperpar(4));
     // update pi start non linear
     pi_star_nl = update_piSC(hyperpar(7), hyperpar(8), gamma_star_nl, hyperpar(4));
+    // update gamma linear
+    gamma_0_l = update_gammaVecC(pi_0_l, hyperpar(4), alpha_0_l, tau_0_l);
+    // check interaction selection indicators
+    if (ha == 2) { // strong heredity
+      for (int j = 0; j<p; j++) {
+        if (gamma_0_l(j) == hyperpar(4)) {
+          for (int k = (j+1); k<p; k++) {
+            gamma_star_l(j,k) = hyperpar(4);
+          } 
+        }
+      }
+    }
+    if (ha == 1) { // weak heredity
+      for (int j = 0; j<p; j++) {
+        for (int k = (j+1); k<p; k++) {
+          if (gamma_0_l(j) == hyperpar(4) && gamma_0_l(k) == hyperpar(4)) {
+            gamma_star_l(j,k) = hyperpar(4); 
+          }
+        } 
+      }
+    }
     //////////////////// effect modifiers linear peNMIG ////////////////////
     for (int j = 0; j<p; j++) {
       for (int k = (j+1); k<p; k++) {
@@ -676,7 +697,31 @@ List bodyMCMC(arma::vec y, int p, int nobs, arma::vec cd, arma::vec cd_val, arma
         }
       } // end linear k
     } // end linear j
-  
+    
+    
+    
+    // update gamma non linear
+    gamma_0_nl = update_gammaVecC(pi_0_nl, hyperpar(4), alpha_0_nl, tau_0_nl);
+    // check interaction selection indicators
+    if (ha == 2) { // strong heredity
+      for (int j = 0; j<nlp; j++) {
+        if (gamma_0_nl(j) == hyperpar(4)) {
+          for (int k = (j+1); k<nlp; k++) {
+            gamma_star_nl(j,k) = hyperpar(4);
+          } 
+        }
+      }
+    }
+    if (ha == 1) { // weak heredity
+      for (int j = 0; j<nlp; j++) {
+        for (int k = (j+1); k<nlp; k++) {
+          if (gamma_0_nl(j) == hyperpar(4) && gamma_0_nl(k) == hyperpar(4)) {
+            gamma_star_nl(j,k) = hyperpar(4); 
+          }
+        } 
+      }
+    }
+
     //////////////////// effect modifiers non-linear peNMIG ////////////////////
     for (int j = 0; j<nlp; j++) {
       for (int k = (j+1); k<nlp; k++) {
@@ -874,10 +919,14 @@ List bodyMCMC(arma::vec y, int p, int nobs, arma::vec cd, arma::vec cd_val, arma
     // update pi 0 non linear
     pi_0_nl = update_piNSC(hyperpar(7), hyperpar(8), gamma_0_nl, hyperpar(4));
     // update gamma 0 linear
-    gamma_0_l = update_gammaVecC(pi_0_l, hyperpar(4), alpha_0_l, tau_0_l);
+    
+    // se ha = 2 e tolgo main j devo elimnare anche tutte le inerazioni che lo coinv.
+    // sia gamma
+    // se ha = 1 e tolgo main j allora devo assicurarmi che l'altro effetto principale 
+    // ci sia e altrimenti tolgo l'interazione
+    // gamma_0_l = update_gammaVecC(pi_0_l, hyperpar(4), alpha_0_l, tau_0_l);
     // update gamma 0 non linear
-    // problemino?? Alla fine avrò un vettore di dimensioni minori 
-    gamma_0_nl = update_gammaVecC(pi_0_nl, hyperpar(4), alpha_0_nl, tau_0_nl);
+    // gamma_0_nl = update_gammaVecC(pi_0_nl, hyperpar(4), alpha_0_nl, tau_0_nl);
     
     
     // update tau 0 linear

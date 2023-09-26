@@ -23,7 +23,7 @@ invMCMC <- function(y, x, y_val = NULL, x_val = NULL, hyperpar = c(5, 25, 5, 5, 
   for(j in 1:p) {
     xj <- x[,j]
     unique_value <- length(unique(xj))
-    if (unique_value == length(xj)) {
+    if (!unique_value == 2) {
       X <- cbind(X, xj)
       xjl <- lin(xj)
       X_l <- cbind(X_l, xjl)
@@ -36,7 +36,7 @@ invMCMC <- function(y, x, y_val = NULL, x_val = NULL, hyperpar = c(5, 25, 5, 5, 
   for(j in 1:p) {
     xj <- x[,j]
     unique_value <- length(unique(xj))
-    if (unique_value < length(xj)) {
+    if (unique_value == 2) {
       X <- cbind(X, xj)
       n_cat <- n_cat + 1
       X_l <- cbind(X_l, xj)
