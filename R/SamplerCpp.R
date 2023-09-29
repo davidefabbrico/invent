@@ -33,7 +33,7 @@ invMCMC <- function(y, x, y_val = NULL, x_val = NULL, hyperpar = c(5, 25, 5, 5, 
       inD <- inD + 1
     }       
   }
-  
+  # linear covariates transformation
   for(j in 1:p) {
     xj <- x[,j]
     if (all(xj == as.integer(xj))) {
