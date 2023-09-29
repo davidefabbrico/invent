@@ -20,23 +20,23 @@ invMCMC <- function(y, x, y_val = NULL, x_val = NULL, hyperpar = c(5, 25, 5, 5, 
   X_nl <- vector()
   d <- vector()
   
+  inD <- 1
   for(j in 1:p) {
     xj <- x[,j]
-    unique_value <- length(unique(xj))
-    if (!unique_value == 2) {
+    if (any(xj != as.integer(xj))) {
       X <- cbind(X, xj)
       xjl <- lin(xj)
       X_l <- cbind(X_l, xjl)
       xjtilde <- sm(x = xj, rankZ = rank) 
       X_nl <- cbind(X_nl, xjtilde)
-      d[j] <- dim(xjtilde)[2]
+      d[inD] <- dim(xjtilde)[2]
+      inD <- inD + 1
     }       
   }
   
   for(j in 1:p) {
     xj <- x[,j]
-    unique_value <- length(unique(xj))
-    if (unique_value == 2) {
+    if (all(xj == as.integer(xj))) {
       X <- cbind(X, xj)
       n_cat <- n_cat + 1
       X_l <- cbind(X_l, xj)

@@ -888,7 +888,7 @@ List bodyMCMC(arma::vec y, int p, int nobs, arma::vec cd, arma::vec cd_val, arma
         }
       } // end non linear k
     } // end non linear j
-
+    
     
     // rescaling linear
     for (int j = 0; j<p; j++) {
