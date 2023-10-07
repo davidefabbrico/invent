@@ -17,6 +17,7 @@ invMCMC(
   thin = 5,
   ha = 2,
   detail = FALSE,
+  idc = FALSE,
   data = NULL
 )
 }

@@ -262,8 +262,8 @@ BEGIN_RCPP
 END_RCPP
 }
 // bodyMCMC
-List bodyMCMC(arma::vec y, int p, int nobs, arma::vec cd, arma::vec cd_val, arma::vec d, arma::vec d_val, arma::mat X_l, arma::mat X_nl, arma::mat X_val_l, arma::mat X_val_nl, arma::vec hyperpar, arma::vec mht, int n_cat, int iter, int burnin, int thin, int ha);
-RcppExport SEXP _invent_bodyMCMC(SEXP ySEXP, SEXP pSEXP, SEXP nobsSEXP, SEXP cdSEXP, SEXP cd_valSEXP, SEXP dSEXP, SEXP d_valSEXP, SEXP X_lSEXP, SEXP X_nlSEXP, SEXP X_val_lSEXP, SEXP X_val_nlSEXP, SEXP hyperparSEXP, SEXP mhtSEXP, SEXP n_catSEXP, SEXP iterSEXP, SEXP burninSEXP, SEXP thinSEXP, SEXP haSEXP) {
+List bodyMCMC(arma::vec y, int p, int nobs, arma::vec cd, arma::vec cd_val, arma::vec d, arma::vec d_val, arma::mat X_l, arma::mat X_nl, arma::mat X_val_l, arma::mat X_val_nl, arma::vec hyperpar, arma::vec mht, int n_cat, int iter, int burnin, int thin, int ha, bool detail);
+RcppExport SEXP _invent_bodyMCMC(SEXP ySEXP, SEXP pSEXP, SEXP nobsSEXP, SEXP cdSEXP, SEXP cd_valSEXP, SEXP dSEXP, SEXP d_valSEXP, SEXP X_lSEXP, SEXP X_nlSEXP, SEXP X_val_lSEXP, SEXP X_val_nlSEXP, SEXP hyperparSEXP, SEXP mhtSEXP, SEXP n_catSEXP, SEXP iterSEXP, SEXP burninSEXP, SEXP thinSEXP, SEXP haSEXP, SEXP detailSEXP) {
 BEGIN_RCPP
     Rcpp::RObject rcpp_result_gen;
     Rcpp::RNGScope rcpp_rngScope_gen;
@@ -285,7 +285,8 @@ BEGIN_RCPP
     Rcpp::traits::input_parameter< int >::type burnin(burninSEXP);
     Rcpp::traits::input_parameter< int >::type thin(thinSEXP);
     Rcpp::traits::input_parameter< int >::type ha(haSEXP);
-    rcpp_result_gen = Rcpp::wrap(bodyMCMC(y, p, nobs, cd, cd_val, d, d_val, X_l, X_nl, X_val_l, X_val_nl, hyperpar, mht, n_cat, iter, burnin, thin, ha));
+    Rcpp::traits::input_parameter< bool >::type detail(detailSEXP);
+    rcpp_result_gen = Rcpp::wrap(bodyMCMC(y, p, nobs, cd, cd_val, d, d_val, X_l, X_nl, X_val_l, X_val_nl, hyperpar, mht, n_cat, iter, burnin, thin, ha, detail));
     return rcpp_result_gen;
 END_RCPP
 }
@@ -309,7 +310,7 @@ static const R_CallMethodDef CallEntries[] = {
     {"_invent_update_xiNLC", (DL_FUNC) &_invent_update_xiNLC, 7},
     {"_invent_mysign", (DL_FUNC) &_invent_mysign, 1},
     {"_invent_compLinPred", (DL_FUNC) &_invent_compLinPred, 6},
-    {"_invent_bodyMCMC", (DL_FUNC) &_invent_bodyMCMC, 18},
+    {"_invent_bodyMCMC", (DL_FUNC) &_invent_bodyMCMC, 19},
     {NULL, NULL, 0}
 };
 

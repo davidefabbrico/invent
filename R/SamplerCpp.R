@@ -6,7 +6,7 @@
 invMCMC <- function(y, x, y_val = NULL, x_val = NULL, hyperpar = c(5, 25, 5, 5, 0.00025, 0.4, 1.6, 0.2, 1.8, 0.4, 1.6, 0.2, 1.8), 
                    mht = c(1.4, 0.8, 1, 0.3, 0.7, 0.4, 4, 2.5), 
                    rank = 0.95, iter = 10000, burnin = iter/2, thin = 5, ha = 2, 
-                   detail = FALSE, data = NULL) {
+                   detail = FALSE, idc = FALSE, data = NULL) {
   
   result <- NULL
   #useful quantities
@@ -78,34 +78,46 @@ invMCMC <- function(y, x, y_val = NULL, x_val = NULL, hyperpar = c(5, 25, 5, 5, 
   result = bodyMCMC(as.vector(y), as.integer(p), as.integer(nobs), as.vector(cd), as.vector(cd_val),
                     as.vector(d), as.vector(d_val), as.matrix(X_l), as.matrix(X_nl), as.matrix(X_val_l), as.matrix(X_val_nl),
                     as.vector(hyperpar), as.vector(mht), as.integer(n_cat), as.integer(iter), 
-                    as.integer(burnin), as.integer(thin), ha)
+                    as.integer(burnin), as.integer(thin), ha, as.logical(detail))
   
   nlp <- p - n_cat
   nout <- (iter-burnin)/thin
-  # Compute the main metrics
-  gammaStarLin <- array(unlist(result$gamma_star_l), dim = c(p, p, nout))
-  gammaStarNLin <- array(unlist(result$gamma_star_nl), dim = c(nlp, nlp, nout))
-  # gamma 0 linear
-  gamma0Lin <- result$gamma_0_l
-  mppi_MainLinear <- apply(gamma0Lin, 2, mean)
-  # gamma 0 non linear
-  gamma0NLin <- result$gamma_0_nl
-  mppi_MainNonLinear <- apply(gamma0NLin, 2, mean)
-  # gamma star linear (list of matrix)
-  mppi_IntLinear <- apply(gammaStarLin, c(1,2), mean)
-  # gamma star non linear
-  mppi_IntNonLinear <- apply(gammaStarNLin, c(1,2), mean)
-  # linear predictor
-  lp_is <- result$linear_predictor
-  yhat <- apply(lp_is, 2, mean)
+  if (detail == TRUE) {
+    # Compute the main metrics
+    gammaStarLin <- array(unlist(result$gamma_star_l), dim = c(p, p, nout))
+    gammaStarNLin <- array(unlist(result$gamma_star_nl), dim = c(nlp, nlp, nout))
+    # gamma 0 linear
+    gamma0Lin <- result$gamma_0_l
+    mppi_MainLinear <- apply(gamma0Lin, 2, mean)
+    # gamma 0 non linear
+    gamma0NLin <- result$gamma_0_nl
+    mppi_MainNonLinear <- apply(gamma0NLin, 2, mean)
+    # gamma star linear (list of matrix)
+    mppi_IntLinear <- apply(gammaStarLin, c(1,2), mean)
+    # gamma star non linear
+    mppi_IntNonLinear <- apply(gammaStarNLin, c(1,2), mean)
+    # linear predictor
+    lp_is <- result$linear_predictor
+    yhat <- apply(lp_is, 2, mean)
+  } else {
+    mppi_IntLinear <- result$gamma_star_l
+    mppi_IntNonLinear <- result$gamma_star_nl
+    mppi_MainLinear <- result$gamma_0_l
+    mppi_MainNonLinear <- result$gamma_0_nl
+    yhat <- result$linear_predictor
+  }
   # mean square error
   mse_is <- mse(yhat, y)
   # log-likelihood
   ll <- result$LogLikelihood
   # prediction
   if (!is.null(y_val)) {
-    lp_os <- result$y_oos
-    y_tilde <- apply(lp_os, 2, mean)
+    if (detail == TRUE) {
+      lp_os <- result$y_oos
+      y_tilde <- apply(lp_os, 2, mean) 
+    } else {
+      y_tilde <- result$y_oos
+    }
     mse_os <- mse(y_tilde, y_val)
   } else {
     lp_os <- NULL

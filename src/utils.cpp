@@ -250,7 +250,7 @@ arma::vec compLinPred(int nobs, double eta0, arma::mat X_l, arma::mat beta_l, ar
 
 // Body MCMC
 // [[Rcpp::export]]
-List bodyMCMC(arma::vec y, int p, int nobs, arma::vec cd, arma::vec cd_val, arma::vec d, arma::vec d_val, arma::mat X_l, arma::mat X_nl, arma::mat X_val_l, arma::mat X_val_nl, arma::vec hyperpar, arma::vec mht, int n_cat, int iter, int burnin, int thin, int ha) {
+List bodyMCMC(arma::vec y, int p, int nobs, arma::vec cd, arma::vec cd_val, arma::vec d, arma::vec d_val, arma::mat X_l, arma::mat X_nl, arma::mat X_val_l, arma::mat X_val_nl, arma::vec hyperpar, arma::vec mht, int n_cat, int iter, int burnin, int thin, int ha, bool detail = false) {
   // Time 
   auto start = std::chrono::high_resolution_clock::now();
   ////////////////////////////////////////////////////
@@ -503,6 +503,14 @@ List bodyMCMC(arma::vec y, int p, int nobs, arma::vec cd, arma::vec cd_val, arma
   arma::vec eta_pl_val(n_val);
   arma::vec y_tilde(n_val);
   arma::vec vecOnesVal = ones(n_val, 1);
+  // detail = false, we choose to limit the growing of the interaction chain
+  // in particuar the matrix.
+  arma::vec gamma_0_l_m(p); // main linear
+  arma::vec gamma_0_nl_m(nlp); // main nonlinear
+  arma::mat gamma_star_l_m(p,p); // interaction linear
+  arma::mat gamma_star_nl_m(nlp,nlp); // interaction nonlinear
+  arma::vec eta_pl_m(nobs); // linear predictor
+  arma::vec y_tilde_m(n_val); // prediction
   ////////////////////////////////////////////////////
   //////////////////// Start MCMC ////////////////////
   ///////////////////////////////////////////////////
@@ -1077,40 +1085,49 @@ List bodyMCMC(arma::vec y, int p, int nobs, arma::vec cd, arma::vec cd_val, arma
     double logLik = arma::accu(dnormLogVec(y, eta_pl, sqrt(sigma)));
     // store resutls
     if(t%thin == 0 && t > burnin-1) { // we start from 0
-      PI_S_l(idx) = pi_star_l;
-      PI_S_nl(idx) = pi_star_nl;
-      PI_0_l(idx) = pi_0_l;
-      PI_0_nl(idx) = pi_0_nl;
-      ETA_PL.row(idx) = eta_pl.t();
-      ETA0(idx) = eta0;
-      SIGMA(idx) = sigma;
-      LOGLIKELIHOOD(idx) = logLik;
-      GAMMA_S_l[idx] = gamma_star_l;
-      GAMMA_S_nl[idx] = gamma_star_nl;
-      TAU_S_l[idx] = tau_star_l;
-      TAU_S_nl[idx] = tau_star_nl;
-      ALPHA_S_l[idx] = alpha_star_l;
-      ALPHA_S_nl[idx] = alpha_star_nl;
-      M_S_l[idx] = m_star_l;
-      M_S_nl[idx] = m_star_nl;
-      XI_S_l[idx] = xi_star_l;
-      XI_S_nl[idx] = xi_star_nl;
-      OMEGA_l[idx] = omega_l;
-      OMEGA_nl[idx] = omega_nl;
-      M_l.row(idx) = m_l.t();
-      M_nl.row(idx) = m_nl.t();
-      XI_l.row(idx) = xi_l.t();
-      XI_nl.row(idx) = xi_nl.t();
-      BETA_l[idx] = beta_l;
-      BETA_nl[idx] = beta_nl;
-      GAMMA_0_l.row(idx) = gamma_0_l.t();
-      GAMMA_0_nl.row(idx) = gamma_0_nl.t();
-      TAU_0_l.row(idx) = tau_0_l.t();
-      TAU_0_nl.row(idx) = tau_0_nl.t();
-      ALPHA_0_l.row(idx) = alpha_0_l.t();
-      ALPHA_0_nl.row(idx) = alpha_0_nl.t();
-      ALPHA_l[idx] = alpha_l;
-      ALPHA_nl[idx] = alpha_nl;
+      if (detail == true) {
+        PI_S_l(idx) = pi_star_l;
+        PI_S_nl(idx) = pi_star_nl;
+        GAMMA_S_l[idx] = gamma_star_l;
+        GAMMA_S_nl[idx] = gamma_star_nl;
+        TAU_S_l[idx] = tau_star_l;
+        TAU_S_nl[idx] = tau_star_nl;
+        ALPHA_S_l[idx] = alpha_star_l;
+        ALPHA_S_nl[idx] = alpha_star_nl;
+        M_S_l[idx] = m_star_l;
+        M_S_nl[idx] = m_star_nl;
+        XI_S_l[idx] = xi_star_l;
+        XI_S_nl[idx] = xi_star_nl;
+        PI_0_l(idx) = pi_0_l;
+        PI_0_nl(idx) = pi_0_nl;
+        ETA_PL.row(idx) = eta_pl.t();
+        ETA0(idx) = eta0;
+        SIGMA(idx) = sigma;
+        LOGLIKELIHOOD(idx) = logLik;
+        OMEGA_l[idx] = omega_l;
+        OMEGA_nl[idx] = omega_nl;
+        M_l.row(idx) = m_l.t();
+        M_nl.row(idx) = m_nl.t();
+        XI_l.row(idx) = xi_l.t();
+        XI_nl.row(idx) = xi_nl.t();
+        BETA_l[idx] = beta_l;
+        BETA_nl[idx] = beta_nl;
+        GAMMA_0_l.row(idx) = gamma_0_l.t();
+        GAMMA_0_nl.row(idx) = gamma_0_nl.t();
+        TAU_0_l.row(idx) = tau_0_l.t();
+        TAU_0_nl.row(idx) = tau_0_nl.t();
+        ALPHA_0_l.row(idx) = alpha_0_l.t();
+        ALPHA_0_nl.row(idx) = alpha_0_nl.t();
+        ALPHA_l[idx] = alpha_l;
+        ALPHA_nl[idx] = alpha_nl;
+      } else {
+        LOGLIKELIHOOD(idx) = logLik;
+        gamma_0_l_m = gamma_0_l_m + gamma_0_l;
+        gamma_0_nl_m = gamma_0_nl_m + gamma_0_nl;
+        gamma_star_l_m = gamma_star_l_m + gamma_star_l;
+        gamma_star_nl_m = gamma_star_nl_m + gamma_star_nl;
+        eta_pl_m = eta_pl_m + eta_pl;
+      }
       if (n_val != 0) {
         // compute alpha linear
         for (int j = 0; j<p; j++) {
@@ -1140,7 +1157,11 @@ List bodyMCMC(arma::vec y, int p, int nobs, arma::vec cd, arma::vec cd_val, arma
         for (int i = 0; i<n_val; i++) {
           y_tilde(i) = R::rnorm(eta_pl_val(i), sqrt(sigma));
         }
-        Y_TILDE.row(idx) = y_tilde.t();
+        if (detail == true) {
+          Y_TILDE.row(idx) = y_tilde.t();
+        } else {
+          y_tilde_m = y_tilde_m + y_tilde;
+        }
       }
       idx = idx + 1;
     }
@@ -1151,47 +1172,65 @@ List bodyMCMC(arma::vec y, int p, int nobs, arma::vec cd, arma::vec cd_val, arma
   // Time 
   auto stop = std::chrono::high_resolution_clock::now();
   auto duration = std::chrono::duration_cast<std::chrono::microseconds>(stop - start).count();
-  
+  // mean no detail
+  gamma_0_l_m = gamma_0_l_m/nout;
+  gamma_0_nl_m = gamma_0_nl_m/nout;
+  gamma_star_l_m = gamma_star_l_m/nout;
+  gamma_star_nl_m = gamma_star_nl_m/nout;
+  eta_pl_m = eta_pl_m/nout;
+  y_tilde_m = y_tilde_m/nout;
   // std::cout << "The computational time for the entire MCMC is " << duration/1000000;
-  
-  return List::create(Named("d") = d,
-                      Named("intercept") = ETA0,
-                      Named("linear_predictor") = ETA_PL,
-                      Named("alpha_0_l") = ALPHA_0_l,
-                      Named("alpha_0_nl") = ALPHA_0_nl,
-                      Named("alpha_star_l") = ALPHA_S_l,
-                      Named("alpha_star_nl") = ALPHA_S_nl,
-                      // Named("m_l") = M_l,
-                      // Named("m_nl") = M_nl,
-                      // Named("m_star_l") = M_S_l,
-                      // Named("m_star_nl") = M_S_nl,
-                      // Named("xi_l") = XI_l,
-                      // Named("xi_nl") = XI_nl,
-                      // Named("xi_star_l") = XI_S_l,
-                      // Named("xi_star_nl") = XI_S_nl,
-                      // Named("tau_0_l") = TAU_0_l,
-                      // Named("tau_0_nl") = TAU_0_nl,
-                      // Named("tau_star_l") = TAU_S_l,
-                      // Named("tau_star_nl") = TAU_S_nl
-                      Named("gamma_0_l") = GAMMA_0_l,
-                      Named("gamma_0_nl") = GAMMA_0_nl,
-                      Named("gamma_star_l") = GAMMA_S_l,
-                      Named("gamma_star_nl") = GAMMA_S_nl,
-                      // Named("pi_0_l") = PI_0_l
-                      // Named("pi_0_nl") = PI_0_nl,
-                      // Named("pi_star_l") = PI_S_l,
-                      // Named("pi_star_nl") = PI_S_nl,
-                      Named("sigma") = SIGMA,
-                      Named("LogLikelihood") = LOGLIKELIHOOD,
-                      // Named("acc_a_s_l") = alpha_star_l_acc/iter,
-                      // Named("acc_a_s_nl") = alpha_star_nl_acc/iter,
-                      // Named("acc_xi_s_l") = xi_star_l_acc/iter,
-                      // Named("acc_xi_s_nl") = xi_star_nl_acc/iter,
-                      // Named("acc_a_0_l") = alpha_0_l_acc/iter, 
-                      // Named("acc_a_0_nl") = alpha_0_nl_acc/iter, 
-                      // Named("acc_xi_l") = xi_l_acc/iter, 
-                      // Named("acc_xi_nl") = xi_nl_acc/iter,
-                      Named("y_oos") = Y_TILDE,
-                      Named("Execution_Time") = duration/1000000
-  );
+  if (detail == true) {
+    return List::create(Named("d") = d,
+                        Named("intercept") = ETA0,
+                        Named("linear_predictor") = ETA_PL,
+                        Named("alpha_0_l") = ALPHA_0_l,
+                        Named("alpha_0_nl") = ALPHA_0_nl,
+                        Named("alpha_star_l") = ALPHA_S_l,
+                        Named("alpha_star_nl") = ALPHA_S_nl,
+                        // Named("m_l") = M_l,
+                        // Named("m_nl") = M_nl,
+                        // Named("m_star_l") = M_S_l,
+                        // Named("m_star_nl") = M_S_nl,
+                        // Named("xi_l") = XI_l,
+                        // Named("xi_nl") = XI_nl,
+                        // Named("xi_star_l") = XI_S_l,
+                        // Named("xi_star_nl") = XI_S_nl,
+                        // Named("tau_0_l") = TAU_0_l,
+                        // Named("tau_0_nl") = TAU_0_nl,
+                        // Named("tau_star_l") = TAU_S_l,
+                        // Named("tau_star_nl") = TAU_S_nl
+                        Named("gamma_0_l") = GAMMA_0_l,
+                        Named("gamma_0_nl") = GAMMA_0_nl,
+                        Named("gamma_star_l") = GAMMA_S_l,
+                        Named("gamma_star_nl") = GAMMA_S_nl,
+                        // Named("pi_0_l") = PI_0_l
+                        // Named("pi_0_nl") = PI_0_nl,
+                        // Named("pi_star_l") = PI_S_l,
+                        // Named("pi_star_nl") = PI_S_nl,
+                        Named("sigma") = SIGMA,
+                        Named("LogLikelihood") = LOGLIKELIHOOD,
+                        // Named("acc_a_s_l") = alpha_star_l_acc/iter,
+                        // Named("acc_a_s_nl") = alpha_star_nl_acc/iter,
+                        // Named("acc_xi_s_l") = xi_star_l_acc/iter,
+                        // Named("acc_xi_s_nl") = xi_star_nl_acc/iter,
+                        // Named("acc_a_0_l") = alpha_0_l_acc/iter, 
+                        // Named("acc_a_0_nl") = alpha_0_nl_acc/iter, 
+                        // Named("acc_xi_l") = xi_l_acc/iter, 
+                        // Named("acc_xi_nl") = xi_nl_acc/iter,
+                        Named("y_oos") = Y_TILDE,
+                        Named("Execution_Time") = duration/1000000
+    );
+  } else {
+    return List::create(Named("d") = d,
+                        Named("linear_predictor") = eta_pl_m,
+                        Named("gamma_0_l") = gamma_0_l_m,
+                        Named("gamma_0_nl") = gamma_0_nl_m,
+                        Named("gamma_star_l") = gamma_star_l_m,
+                        Named("gamma_star_nl") = gamma_star_nl_m,
+                        Named("LogLikelihood") = LOGLIKELIHOOD,
+                        Named("y_oos") = y_tilde_m,
+                        Named("Execution_Time") = duration/1000000
+    );
+  }
 }
