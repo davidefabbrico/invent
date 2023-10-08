@@ -73,7 +73,7 @@ compLinPred <- function(nobs, eta0, X_l, beta_l, X_nl, beta_nl) {
     .Call(`_invent_compLinPred`, nobs, eta0, X_l, beta_l, X_nl, beta_nl)
 }
 
-bodyMCMC <- function(y, p, nobs, cd, cd_val, d, d_val, X_l, X_nl, X_val_l, X_val_nl, hyperpar, mht, n_cat, iter, burnin, thin, ha, detail = FALSE) {
-    .Call(`_invent_bodyMCMC`, y, p, nobs, cd, cd_val, d, d_val, X_l, X_nl, X_val_l, X_val_nl, hyperpar, mht, n_cat, iter, burnin, thin, ha, detail)
+bodyMCMC <- function(y, p, nobs, cd, cd_val, d, d_val, X_l, X_nl, X_val_l, X_val_nl, hyperpar, mht, n_cat, iter, burnin, thin, ha, detail = FALSE, pb = TRUE) {
+    .Call(`_invent_bodyMCMC`, y, p, nobs, cd, cd_val, d, d_val, X_l, X_nl, X_val_l, X_val_nl, hyperpar, mht, n_cat, iter, burnin, thin, ha, detail, pb)
 }
 

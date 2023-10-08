@@ -250,7 +250,7 @@ arma::vec compLinPred(int nobs, double eta0, arma::mat X_l, arma::mat beta_l, ar
 
 // Body MCMC
 // [[Rcpp::export]]
-List bodyMCMC(arma::vec y, int p, int nobs, arma::vec cd, arma::vec cd_val, arma::vec d, arma::vec d_val, arma::mat X_l, arma::mat X_nl, arma::mat X_val_l, arma::mat X_val_nl, arma::vec hyperpar, arma::vec mht, int n_cat, int iter, int burnin, int thin, int ha, bool detail = false) {
+List bodyMCMC(arma::vec y, int p, int nobs, arma::vec cd, arma::vec cd_val, arma::vec d, arma::vec d_val, arma::mat X_l, arma::mat X_nl, arma::mat X_val_l, arma::mat X_val_nl, arma::vec hyperpar, arma::vec mht, int n_cat, int iter, int burnin, int thin, int ha, bool detail = false, bool pb = true) {
   // Time 
   auto start = std::chrono::high_resolution_clock::now();
   ////////////////////////////////////////////////////
@@ -514,7 +514,9 @@ List bodyMCMC(arma::vec y, int p, int nobs, arma::vec cd, arma::vec cd_val, arma
   ////////////////////////////////////////////////////
   //////////////////// Start MCMC ////////////////////
   ///////////////////////////////////////////////////
-  
+  if (pb == true) {
+    std::cout << "Running MCMC loop:\n";
+  }
   for (int t = 0; t<iter; t++) {
     // update pi start linear
     pi_star_l = update_piSC(hyperpar(5), hyperpar(6), gamma_star_l, hyperpar(4));
@@ -1165,7 +1167,13 @@ List bodyMCMC(arma::vec y, int p, int nobs, arma::vec cd, arma::vec cd_val, arma
       }
       idx = idx + 1;
     }
+    if (pb == true && t%500 == 0 && t > 0) {
+      std::cout << "Iteration: " << t << " (of " << iter << ")\n";
+    }
   } // end iteration
+  if (pb == true) {
+    std::cout << "End MCMC!\n";
+  }
   ////////////////////////////////////////////////////
   //////////////////// End MCMC //////////////////////
   ///////////////////////////////////////////////////
@@ -1180,6 +1188,14 @@ List bodyMCMC(arma::vec y, int p, int nobs, arma::vec cd, arma::vec cd_val, arma
   eta_pl_m = eta_pl_m/nout;
   y_tilde_m = y_tilde_m/nout;
   // std::cout << "The computational time for the entire MCMC is " << duration/1000000;
+  Rcpp::List acc_list = List::create(Named("acc_a_s_l") = alpha_star_l_acc/iter,
+                          Named("acc_a_s_nl") = alpha_star_nl_acc/iter,
+                          Named("acc_xi_s_l") = xi_star_l_acc/iter,
+                          Named("acc_xi_s_nl") = xi_star_nl_acc/iter,
+                          Named("acc_a_0_l") = alpha_0_l_acc/iter, 
+                          Named("acc_a_0_nl") = alpha_0_nl_acc/iter, 
+                          Named("acc_xi_l") = xi_l_acc/iter, 
+                          Named("acc_xi_nl") = xi_nl_acc/iter);
   if (detail == true) {
     return List::create(Named("d") = d,
                         Named("intercept") = ETA0,
@@ -1210,26 +1226,19 @@ List bodyMCMC(arma::vec y, int p, int nobs, arma::vec cd, arma::vec cd_val, arma
                         // Named("pi_star_nl") = PI_S_nl,
                         Named("sigma") = SIGMA,
                         Named("LogLikelihood") = LOGLIKELIHOOD,
-                        // Named("acc_a_s_l") = alpha_star_l_acc/iter,
-                        // Named("acc_a_s_nl") = alpha_star_nl_acc/iter,
-                        // Named("acc_xi_s_l") = xi_star_l_acc/iter,
-                        // Named("acc_xi_s_nl") = xi_star_nl_acc/iter,
-                        // Named("acc_a_0_l") = alpha_0_l_acc/iter, 
-                        // Named("acc_a_0_nl") = alpha_0_nl_acc/iter, 
-                        // Named("acc_xi_l") = xi_l_acc/iter, 
-                        // Named("acc_xi_nl") = xi_nl_acc/iter,
+                        Named("acc_rate") = acc_list,
                         Named("y_oos") = Y_TILDE,
                         Named("Execution_Time") = duration/1000000
     );
   } else {
-    return List::create(Named("d") = d,
-                        Named("linear_predictor") = eta_pl_m,
+    return List::create(Named("linear_predictor") = eta_pl_m,
                         Named("gamma_0_l") = gamma_0_l_m,
                         Named("gamma_0_nl") = gamma_0_nl_m,
                         Named("gamma_star_l") = gamma_star_l_m,
                         Named("gamma_star_nl") = gamma_star_nl_m,
                         Named("LogLikelihood") = LOGLIKELIHOOD,
                         Named("y_oos") = y_tilde_m,
+                        Named("acc_rate") = acc_list,
                         Named("Execution_Time") = duration/1000000
     );
   }

@@ -6,7 +6,7 @@
 invMCMC <- function(y, x, y_val = NULL, x_val = NULL, hyperpar = c(5, 25, 5, 5, 0.00025, 0.4, 1.6, 0.2, 1.8, 0.4, 1.6, 0.2, 1.8), 
                    mht = c(1.4, 0.8, 1, 0.3, 0.7, 0.4, 4, 2.5), 
                    rank = 0.95, iter = 10000, burnin = iter/2, thin = 5, ha = 2, 
-                   detail = FALSE, idc = FALSE, data = NULL) {
+                   detail = FALSE, idc = FALSE, data = NULL, pb = TRUE) {
   
   result <- NULL
   #useful quantities
@@ -78,7 +78,7 @@ invMCMC <- function(y, x, y_val = NULL, x_val = NULL, hyperpar = c(5, 25, 5, 5, 
   result = bodyMCMC(as.vector(y), as.integer(p), as.integer(nobs), as.vector(cd), as.vector(cd_val),
                     as.vector(d), as.vector(d_val), as.matrix(X_l), as.matrix(X_nl), as.matrix(X_val_l), as.matrix(X_val_nl),
                     as.vector(hyperpar), as.vector(mht), as.integer(n_cat), as.integer(iter), 
-                    as.integer(burnin), as.integer(thin), ha, as.logical(detail))
+                    as.integer(burnin), as.integer(thin), ha, as.logical(detail), as.logical(pb))
   
   nlp <- p - n_cat
   nout <- (iter-burnin)/thin
@@ -187,6 +187,8 @@ invMCMC <- function(y, x, y_val = NULL, x_val = NULL, hyperpar = c(5, 25, 5, 5, 
   }
   # exexution time
   execution_time <- result$Execution_Time
+  # acceptance ratio 
+  acc_rate <- result$acc_rate
   
   # Choice to have the details or not
   if (detail == TRUE) {
@@ -197,12 +199,12 @@ invMCMC <- function(y, x, y_val = NULL, x_val = NULL, hyperpar = c(5, 25, 5, 5, 
         res <- list(linear_predictor = yhat, y_OutSample = y_tilde, LogLikelihood = ll, 
                     mse_inSample = mse_is, mse_outSample = mse_os, mppi_MainLinear = mppi_MainLinear, 
                     mppi_MainNonLinear = mppi_MainNonLinear, mppi_IntLinear = mppi_IntLinear, 
-                    mppi_IntNonLinear = mppi_IntNonLinear, execution_time = execution_time)
+                    mppi_IntNonLinear = mppi_IntNonLinear, execution_time = execution_time, acc_rate = acc_rate)
       } else {
         res <- list(linear_predictor = yhat, LogLikelihood = ll, 
                     mse = mse_is, mppi_MainLinear = mppi_MainLinear, 
                     mppi_MainNonLinear = mppi_MainNonLinear, mppi_IntLinear = mppi_IntLinear, 
-                    mppi_IntNonLinear = mppi_IntNonLinear, execution_time = execution_time)
+                    mppi_IntNonLinear = mppi_IntNonLinear, execution_time = execution_time, acc_rate = acc_rate)
       }
     } else {
       if (!is.null(y_val)) {
@@ -210,12 +212,12 @@ invMCMC <- function(y, x, y_val = NULL, x_val = NULL, hyperpar = c(5, 25, 5, 5, 
         res <- list(linear_predictor = yhat, y_OutSample = y_tilde, 
                     LogLikelihood = ll, mse_inSample = mse_is, 
                     mse_outSample = mse_os, tpr = tpr, fpr = fpr,
-                    matt = matt, execution_time = execution_time)
+                    matt = matt, execution_time = execution_time, acc_rate = acc_rate)
       } else {
         # return tpr, fpr, matt
         res <- list(linear_predictor = yhat, 
                     LogLikelihood = ll, mse = mse_is, tpr = tpr, fpr = fpr,
-                    matt = matt, execution_time = execution_time)
+                    matt = matt, execution_time = execution_time, acc_rate = acc_rate)
       }
     }
   }

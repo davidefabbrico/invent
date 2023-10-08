@@ -18,7 +18,8 @@ invMCMC(
   ha = 2,
   detail = FALSE,
   idc = FALSE,
-  data = NULL
+  data = NULL,
+  pb = TRUE
 )
 }
 \description{
