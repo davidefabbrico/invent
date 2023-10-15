@@ -6,77 +6,105 @@
 invMCMC <- function(y, x, y_val = NULL, x_val = NULL, hyperpar = c(5, 25, 5, 5, 0.00025, 0.4, 1.6, 0.2, 1.8, 0.4, 1.6, 0.2, 1.8), 
                    mht = c(1.4, 0.8, 1, 0.3, 0.7, 0.4, 4, 2.5), 
                    rank = 0.95, iter = 10000, burnin = iter/2, thin = 5, ha = 2, 
-                   detail = FALSE, idc = FALSE, data = NULL, pb = TRUE) {
+                   detail = FALSE, data = NULL, pb = TRUE) {
   
   result <- NULL
   #useful quantities
   nobs <- dim(x)[1] # number of observations
   p <- dim(x)[2] # number of covariates
   n_cat <- 0
-  
+  nval <- dim(x_val)[1]
+  # matrice del disegno completa sia training che validation
+  dx <- rbind(x, x_val)
   #build our basis p spline representation
   X <- vector()
-  X_l <- vector()
-  X_nl <- vector()
+  X_lin <- vector()
+  X_nlin <- vector()
   d <- vector()
   
   inD <- 1
   for(j in 1:p) {
-    xj <- x[,j]
+    xj <- dx[,j]
     if (any(xj != as.integer(xj))) {
       X <- cbind(X, xj)
       xjl <- lin(xj)
-      X_l <- cbind(X_l, xjl)
+      X_lin <- cbind(X_lin, xjl)
       xjtilde <- sm(x = xj, rankZ = rank) 
-      X_nl <- cbind(X_nl, xjtilde)
+      X_nlin <- cbind(X_nlin, xjtilde)
       d[inD] <- dim(xjtilde)[2]
       inD <- inD + 1
     }       
   }
   # linear covariates transformation
   for(j in 1:p) {
-    xj <- x[,j]
+    xj <- dx[,j]
     if (all(xj == as.integer(xj))) {
       X <- cbind(X, xj)
       n_cat <- n_cat + 1
-      X_l <- cbind(X_l, xj)
+      X_lin <- cbind(X_lin, xj)
     }   
   }
   cd <- c(0, cumsum(d))
   q <- sum(d)
-
+  
+  X_l <- X_lin[1:nobs,]
+  X_val_l <- X_lin[(nobs+1):(nobs+nval),]
+  X_nl <- X_nlin[1:nobs,]
+  X_val_nl <- X_nlin[(nobs+1):(nobs+nval),]
+  
   # Prediction
   # build our basis p spline representation
-  X_val <- vector()
-  X_val_l <- vector()
-  X_val_nl <- vector()
-  d_val <- vector()
-  cd_val <- 0
-  q_val <- 0
-  if (!is.null(y_val)) {
-    for(j in 1:p) {
-      xj_val <- x_val[,j]
-      unique_value_val <- length(unique(xj_val))
-      X_val <- cbind(X_val, xj_val)
-      if (unique_value_val < length(xj_val)) { # strong assumption?
-        xjl_val <- lin(xj_val)
-        X_val_l <- cbind(X_val_l, xj_val)
-      } else {
-        X_val <- cbind(X_val, xj_val)
-        xjl_val <- lin(xj_val)
-        X_val_l <- cbind(X_val_l, xjl_val)
-        xjtilde_val <- sm(x = xj_val, rankZ = rank) 
-        X_val_nl <- cbind(X_val_nl, xjtilde_val)
-        d_val[j] <- dim(xjtilde_val)[2] 
-      }
-    }
-    cd_val <- c(0, cumsum(d_val))
-    q_val <- sum(d_val)
-  }
+  # X_val <- vector()
+  # X_val_l <- vector()
+  # X_val_nl <- vector()
+  # d_val <- vector()
+  # 
+  # if (!is.null(y_val)) {
+  #   inD_val <- 1
+  #   for(j in 1:p) {
+  #     xj_val <- x_val[,j]
+  #     if (any(xj_val != as.integer(xj_val))) {
+  #       X_val <- cbind(X_val, xj_val)
+  #       xjl_val <- lin(xj_val)
+  #       X_val_l <- cbind(X_val_l, xjl_val)
+  #       xjtilde_val <- sm(x = xj_val, rankZ = rank) 
+  #       X_val_nl <- cbind(X_val_nl, xjtilde_val)
+  #       d_val[inD_val] <- dim(xjtilde_val)[2]
+  #       inD_val <- inD_val + 1
+  #     }       
+  #   }
+  #   inD <- 1
+  #   for(j in 1:p) {
+  #     xj <- x[,j]
+  #     if (any(xj != as.integer(xj))) {
+  #       X <- cbind(X, xj)
+  #       xjl <- lin(xj)
+  #       X_l <- cbind(X_l, xjl)
+  #       xjtilde <- sm(x = xj, rankZ = rank) 
+  #       X_nl <- cbind(X_nl, xjtilde)
+  #       d[inD] <- dim(xjtilde)[2]
+  #       inD <- inD + 1
+  #     }       
+  #   }
+  #   # linear covariates transformation
+  #   for(j in 1:p) {
+  #     xj_val <- x_val[,j]
+  #     if (all(xj_val == as.integer(xj_val))) {
+  #       X_val <- cbind(X_val, xj_val)
+  #       # n_cat <- n_cat + 1
+  #       X_val_l <- cbind(X_val_l, xj_val)
+  #     }   
+  #   }
+  #   cd_val <- c(0, cumsum(d_val))
+  #   q_val <- sum(d_val)
+  # } else {
+  #   cd_val <- 0
+  #   q_val <- 0
+  # }
   
   # Call the C++ function
-  result = bodyMCMC(as.vector(y), as.integer(p), as.integer(nobs), as.vector(cd), as.vector(cd_val),
-                    as.vector(d), as.vector(d_val), as.matrix(X_l), as.matrix(X_nl), as.matrix(X_val_l), as.matrix(X_val_nl),
+  result = bodyMCMC(as.vector(y), as.integer(p), as.integer(nobs), as.vector(cd),
+                    as.vector(d), as.matrix(X_l), as.matrix(X_nl), as.matrix(X_val_l), as.matrix(X_val_nl),
                     as.vector(hyperpar), as.vector(mht), as.integer(n_cat), as.integer(iter), 
                     as.integer(burnin), as.integer(thin), ha, as.logical(detail), as.logical(pb))
   
