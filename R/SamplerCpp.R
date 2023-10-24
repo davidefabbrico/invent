@@ -47,10 +47,17 @@ invMCMC <- function(y, x, y_val = NULL, x_val = NULL, hyperpar = c(5, 25, 5, 5, 
   cd <- c(0, cumsum(d))
   q <- sum(d)
   
-  X_l <- X_lin[1:nobs,]
-  X_val_l <- X_lin[(nobs+1):(nobs+nval),]
-  X_nl <- X_nlin[1:nobs,]
-  X_val_nl <- X_nlin[(nobs+1):(nobs+nval),]
+  if (nval != 0) {
+    X_l <- X_lin[1:nobs,]
+    X_val_l <- X_lin[(nobs+1):(nobs+nval),]
+    X_nl <- X_nlin[1:nobs,]
+    X_val_nl <- X_nlin[(nobs+1):(nobs+nval),]
+  } else {
+    X_l <- X_lin
+    X_val_l <- NULL
+    X_nl <- X_nlin
+    X_val_nl <- NULL
+  }
   
   # Prediction
   # build our basis p spline representation
