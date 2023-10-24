@@ -57,9 +57,9 @@ invMCMC <- function(y, x, y_val = NULL, x_val = NULL, hyperpar = c(5, 25, 5, 5, 
     X_val_nl <- X_nlin[(nobs+1):(nobs+nval),]
   } else {
     X_l <- X_lin
-    X_val_l <- matrix(0, nrow = 1, ncol = 1)
+    X_val_l <- matrix(0, nrow = 0, ncol = 0)
     X_nl <- X_nlin
-    X_val_nl <- matrix(0, nrow = 1, ncol = 1)
+    X_val_nl <- matrix(0, nrow = 0, ncol = 0)
   }
   
   # Prediction
