@@ -13,7 +13,10 @@ invMCMC <- function(y, x, y_val = NULL, x_val = NULL, hyperpar = c(5, 25, 5, 5, 
   nobs <- dim(x)[1] # number of observations
   p <- dim(x)[2] # number of covariates
   n_cat <- 0
-  nval <- dim(x_val)[1]
+  nval <- 0
+  if (!is.null(x_val)) {
+    nval <- dim(x_val)[1]
+  }
   # matrice del disegno completa sia training che validation
   dx <- rbind(x, x_val)
   #build our basis p spline representation
@@ -54,9 +57,9 @@ invMCMC <- function(y, x, y_val = NULL, x_val = NULL, hyperpar = c(5, 25, 5, 5, 
     X_val_nl <- X_nlin[(nobs+1):(nobs+nval),]
   } else {
     X_l <- X_lin
-    X_val_l <- NULL
+    X_val_l <- matrix(0, nrow = 1, ncol = 1)
     X_nl <- X_nlin
-    X_val_nl <- NULL
+    X_val_nl <- matrix(0, nrow = 1, ncol = 1)
   }
   
   # Prediction

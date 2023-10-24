@@ -491,20 +491,19 @@ List bodyMCMC(arma::vec y, int p, int nobs, arma::vec cd, arma::vec d, arma::mat
   double xi_star;
   arma::vec xi_starnl;
   // Predictive
-  if (X_val_l != NULL) {
-    int n_val = X_val_l.n_rows;
-    arma::mat Y_TILDE(nout, n_val);
-    // predictive
-    arma::mat alpha_val_l(n_val, p);
-    arma::mat alpha_val_nl(n_val, nlp);
-    arma::mat beta_val_l(n_val, p);
-    arma::mat beta_val_nl(n_val, q);
-    arma::vec eta_pl_val(n_val);
-    arma::vec y_tilde(n_val);
-    arma::vec vecOnesVal = ones(n_val, 1);
-  } else {
-    int n_val = 0;
+  int n_val = 0;
+  if (!X_val_l.is_empty()) {
+    n_val = X_val_l.n_rows;
   }
+  arma::mat Y_TILDE(nout, n_val);
+  // predictive
+  arma::mat alpha_val_l(n_val, p);
+  arma::mat alpha_val_nl(n_val, nlp);
+  arma::mat beta_val_l(n_val, p);
+  arma::mat beta_val_nl(n_val, q);
+  arma::vec eta_pl_val(n_val);
+  arma::vec y_tilde(n_val);
+  arma::vec vecOnesVal = ones(n_val, 1);
   // detail = false, we choose to limit the growing of the interaction chain
   // in particuar the matrix.
   arma::vec gamma_0_l_m(p); // main linear
