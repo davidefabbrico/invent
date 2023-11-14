@@ -165,9 +165,9 @@ invMCMC <- function(y, x, y_val = NULL, x_val = NULL, hyperpar = c(5, 25, 5, 5, 
   if (!is.null(data)) {
     ############### Linear main effect ###################
     # selected by the model
-    sel_MainLinear <- factor(as.numeric(mppi_MainLinear > 0.5), levels = c(0,1))
+    sel_MainLinear <- as.numeric(mppi_MainLinear > 0.5)
     # true non null effect
-    true_MainLinear <- factor(as.numeric(data$alpha_0_l[1,] != 0), levels = c(0,1))
+    true_MainLinear <- as.numeric(data$alpha_0_l[1,] != 0)
     # table linear main effect
     tab_MainLinear <- matrix(table(sel_MainLinear, true_MainLinear), nrow = 2, ncol = 2)
     matt_MainLinear <- mcc(confusionM = tab_MainLinear)
@@ -175,9 +175,9 @@ invMCMC <- function(y, x, y_val = NULL, x_val = NULL, hyperpar = c(5, 25, 5, 5, 
     fpr_MainLinear <- tab_MainLinear[2,1]/sum(tab_MainLinear[,1])
     ############### Non linear main effect ###################
     # selected by the model
-    sel_MainNonLinear <- factor(as.numeric(mppi_MainNonLinear > 0.5), levels = c(0,1))
+    sel_MainNonLinear <- as.numeric(mppi_MainNonLinear > 0.5)
     # true non null effect
-    true_MainNonLinear <- factor(as.numeric(data$alpha_0_tilde[1,] != 0), levels = c(0,1))
+    true_MainNonLinear <- as.numeric(data$alpha_0_tilde[1,] != 0)
     # table linear main effect
     tab_MainNonLinear <- matrix(table(sel_MainNonLinear, true_MainNonLinear), nrow = 2, ncol = 2)
     matt_MainNonLinear <- mcc(confusionM = tab_MainNonLinear)
@@ -213,9 +213,9 @@ invMCMC <- function(y, x, y_val = NULL, x_val = NULL, hyperpar = c(5, 25, 5, 5, 
     tpr_IntNonLinear <- tab_IntNonLinear[2,2]/sum(tab_IntNonLinear[,2]) 
     fpr_IntNonLinear <- tab_IntNonLinear[2,1]/sum(tab_IntNonLinear[,1])
     # Total metric
-    selectInd <- c(as.numeric(sel_MainLinear)-1, as.numeric(sel_MainNonLinear)-1, 
+    selectInd <- c(as.numeric(sel_MainLinear), as.numeric(sel_MainNonLinear), 
                    Vec_sel_IntLinear , Vec_sel_IntNonLinear)
-    trueInd <- c(as.numeric(true_MainLinear)-1, as.numeric(true_MainNonLinear)-1, 
+    trueInd <- c(as.numeric(true_MainLinear), as.numeric(true_MainNonLinear), 
                  Vec_true_IntLinear, Vec_true_IntNonLinear)
     ##########  aggregate
     contTable <- matrix(table(selectInd, trueInd), nrow = 2, ncol = 2)
