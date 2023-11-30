@@ -227,35 +227,38 @@ invMCMC <- function(y, x, y_val = NULL, x_val = NULL, hyperpar = c(5, 25, 5, 5, 
   execution_time <- result$Execution_Time
   # acceptance ratio 
   acc_rate <- result$acc_rate
-  
+  # sigma error variance
+  sigma <- result$sigma
+  # complete y_tilde
+  y_tComplete <- result$y_tilde
   # Choice to have the details or not
   if (detail == TRUE) {
     res <- result
   } else {
     if (is.null(data)) {
       if (!is.null(y_val)) {
-        res <- list(linear_predictor = yhat, y_OutSample = y_tilde, LogLikelihood = ll, 
+        res <- list(linear_predictor = yhat, y_OutSample = y_tilde, LogLikelihood = ll, y_tComp = y_tComplete,
                     mse_inSample = mse_is, mse_outSample = mse_os, mppi_MainLinear = mppi_MainLinear, 
                     mppi_MainNonLinear = mppi_MainNonLinear, mppi_IntLinear = mppi_IntLinear, 
-                    mppi_IntNonLinear = mppi_IntNonLinear, execution_time = execution_time, acc_rate = acc_rate)
+                    mppi_IntNonLinear = mppi_IntNonLinear, execution_time = execution_time, acc_rate = acc_rate, sigma = sigma)
       } else {
         res <- list(linear_predictor = yhat, LogLikelihood = ll, 
                     mse = mse_is, mppi_MainLinear = mppi_MainLinear, 
                     mppi_MainNonLinear = mppi_MainNonLinear, mppi_IntLinear = mppi_IntLinear, 
-                    mppi_IntNonLinear = mppi_IntNonLinear, execution_time = execution_time, acc_rate = acc_rate)
+                    mppi_IntNonLinear = mppi_IntNonLinear, execution_time = execution_time, acc_rate = acc_rate, sigma = sigma)
       }
     } else {
       if (!is.null(y_val)) {
         # return tpr, fpr, matt
-        res <- list(linear_predictor = yhat, y_OutSample = y_tilde, 
+        res <- list(linear_predictor = yhat, y_OutSample = y_tilde, y_tComp = y_tComplete,
                     LogLikelihood = ll, mse_inSample = mse_is, 
                     mse_outSample = mse_os, tpr = tpr, fpr = fpr,
-                    matt = matt, execution_time = execution_time, acc_rate = acc_rate)
+                    matt = matt, execution_time = execution_time, acc_rate = acc_rate, sigma = sigma)
       } else {
         # return tpr, fpr, matt
         res <- list(linear_predictor = yhat, 
                     LogLikelihood = ll, mse = mse_is, tpr = tpr, fpr = fpr,
-                    matt = matt, execution_time = execution_time, acc_rate = acc_rate)
+                    matt = matt, execution_time = execution_time, acc_rate = acc_rate, sigma = sigma)
       }
     }
   }

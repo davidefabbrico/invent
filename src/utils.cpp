@@ -1125,6 +1125,7 @@ List bodyMCMC(arma::vec y, int p, int nobs, arma::vec cd, arma::vec d, arma::mat
         ALPHA_nl[idx] = alpha_nl;
       } else {
         LOGLIKELIHOOD(idx) = logLik;
+        SIGMA(idx) = sigma;
         gamma_0_l_m = gamma_0_l_m + gamma_0_l;
         gamma_0_nl_m = gamma_0_nl_m + gamma_0_nl;
         gamma_star_l_m = gamma_star_l_m + gamma_star_l;
@@ -1160,11 +1161,13 @@ List bodyMCMC(arma::vec y, int p, int nobs, arma::vec cd, arma::vec d, arma::mat
         for (int i = 0; i<n_val; i++) {
           y_tilde(i) = R::rnorm(eta_pl_val(i), sqrt(sigma));
         }
-        if (detail == true) {
-          Y_TILDE.row(idx) = y_tilde.t();
-        } else {
-          y_tilde_m = y_tilde_m + y_tilde;
-        }
+        // if (detail == true) {
+        //   Y_TILDE.row(idx) = y_tilde.t();
+        // } else {
+        //   y_tilde_m = y_tilde_m + y_tilde;
+        // }
+        Y_TILDE.row(idx) = y_tilde.t();
+        y_tilde_m = y_tilde_m + y_tilde;
       }
       idx = idx + 1;
     }
@@ -1239,6 +1242,8 @@ List bodyMCMC(arma::vec y, int p, int nobs, arma::vec cd, arma::vec d, arma::mat
                         Named("gamma_star_nl") = gamma_star_nl_m,
                         Named("LogLikelihood") = LOGLIKELIHOOD,
                         Named("y_oos") = y_tilde_m,
+                        Named("y_tilde") = Y_TILDE,
+                        Named("sigma") = SIGMA,
                         Named("acc_rate") = acc_list,
                         Named("Execution_Time") = duration/1000000
     );
