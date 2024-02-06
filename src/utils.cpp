@@ -1202,7 +1202,7 @@ List bodyMCMC(arma::vec y, int p, int nobs, arma::vec cd, arma::vec d, arma::mat
                           Named("acc_xi_nl") = xi_nl_acc/iter);
   if (detail == true) {
     return List::create(Named("d") = d,
-                        Named("intercept") = ETA0,
+                        // Named("intercept") = ETA0,
                         Named("linear_predictor") = ETA_PL,
                         Named("Beta_l") = BETA_l,
                         Named("Beta_nl") = BETA_nl,
@@ -1226,13 +1226,13 @@ List bodyMCMC(arma::vec y, int p, int nobs, arma::vec cd, arma::vec d, arma::mat
                         Named("gamma_0_nl") = GAMMA_0_nl,
                         Named("gamma_star_l") = GAMMA_S_l,
                         Named("gamma_star_nl") = GAMMA_S_nl,
-                        // Named("pi_0_l") = PI_0_l
+                        // Named("pi_0_l") = PI_0_l,
                         // Named("pi_0_nl") = PI_0_nl,
                         // Named("pi_star_l") = PI_S_l,
                         // Named("pi_star_nl") = PI_S_nl,
                         Named("sigma") = SIGMA,
                         Named("LogLikelihood") = LOGLIKELIHOOD,
-                        Named("acc_rate") = acc_list,
+                        // Named("acc_rate") = acc_list,
                         Named("y_oos") = Y_TILDE,
                         Named("Execution_Time") = duration/1000000
     );

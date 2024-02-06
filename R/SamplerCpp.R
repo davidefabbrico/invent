@@ -3,7 +3,7 @@
 #' @export
 
 ##### ------------------------------------------------------------------ ######
-invMCMC <- function(y, x, y_val = NULL, x_val = NULL, hyperpar = c(5, 2, 5, 5, 0.00025, 0.4, 1.6, 0.2, 1.8, 0.4, 1.6, 0.2, 1.8), 
+invMCMC <- function(y, x, y_val = NULL, x_val = NULL, hyperpar = c(5, 5, 5, 5, 0.00025, 0.4, 1.6, 0.2, 1.8, 0.4, 1.6, 0.2, 1.8), 
                    mht = c(1.4, 0.8, 1, 0.3, 0.7, 0.4, 4, 2.5), 
                    rank = 0.95, iter = 10000, burnin = iter/2, thin = 5, ha = 2, 
                    detail = FALSE, data = NULL, pb = TRUE) {
@@ -234,6 +234,11 @@ invMCMC <- function(y, x, y_val = NULL, x_val = NULL, hyperpar = c(5, 2, 5, 5, 0
   # Choice to have the details or not
   if (detail == TRUE) {
     res <- result
+    # res <- list(d = d, linear_predictor = result$linear_predictor,
+    #             beta_l = result$beta_l, beta_nl = result$beta_nl, alpha_0_l = result$alpha_0_l,
+    #             alpha_0_nl = result$alpha_0_nl, alpha_star_l = result$alpha_star_l, alpha_star_nl = result$alpha_star_nl,
+    #             gamma_0_l = result$gamma_0_l, gamma_0_nl = result$gamma_0_nl, gamma_star_l = result$gamma_star_l,
+    #             gamma_star_nl = result$gamma_star_nl, sigma = result$sigma, LogLikelihood = result$LogLikelihood, y_oos = result$y_oos)
   } else {
     if (is.null(data)) {
       if (!is.null(y_val)) {
