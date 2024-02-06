@@ -13,4 +13,4 @@ Imports: Rcpp (>= 1.0.10), mltools, spikeSlabGAM
 LinkingTo: Rcpp, RcppArmadillo
 URL: https://github.com/mattpedone/invent
 BugReports: https://github.com/mattpedone/invent/issues
-RoxygenNote: 7.2.3
+RoxygenNote: 7.3.1

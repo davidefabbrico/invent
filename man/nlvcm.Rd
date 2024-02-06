@@ -2,6 +2,8 @@
 % Please edit documentation in R/invent.R
 \docType{package}
 \name{nlvcm}
+\alias{invent}
+\alias{invent-package}
 \alias{nlvcm}
 \title{invent}
 \description{
@@ -13,6 +15,14 @@ The implementation has been done in \code{C++} through the use of
 }
 \references{
 TBA
+}
+\seealso{
+Useful links:
+\itemize{
+  \item \url{https://github.com/mattpedone/invent}
+  \item Report bugs at \url{https://github.com/mattpedone/invent/issues}
+}
+
 }
 \author{
 Davide Fabbrico
