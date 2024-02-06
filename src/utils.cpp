@@ -1204,6 +1204,8 @@ List bodyMCMC(arma::vec y, int p, int nobs, arma::vec cd, arma::vec d, arma::mat
     return List::create(Named("d") = d,
                         Named("intercept") = ETA0,
                         Named("linear_predictor") = ETA_PL,
+                        Named("Beta_l") = BETA_l,
+                        Named("Beta_nl") = BETA_nl,
                         Named("alpha_0_l") = ALPHA_0_l,
                         Named("alpha_0_nl") = ALPHA_0_nl,
                         Named("alpha_star_l") = ALPHA_S_l,
