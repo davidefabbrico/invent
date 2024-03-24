@@ -241,7 +241,9 @@ invMCMC <- function(y, x, y_val = NULL, x_val = NULL, hyperpar = c(5, 5, 5, 5, 0
     #             gamma_star_nl = result$gamma_star_nl, sigma = result$sigma, LogLikelihood = result$LogLikelihood, y_oos = result$y_oos)
   } else {
     if (is.null(data)) {
+      # if there is no data generating mechanism
       if (!is.null(y_val)) {
+        # if there is the posterior predictive distribution
         res <- list(linear_predictor = yhat, y_OutSample = y_tilde, LogLikelihood = ll, y_tComp = y_tComplete,
                     mse_inSample = mse_is, mse_outSample = mse_os, mppi_MainLinear = mppi_MainLinear, 
                     mppi_MainNonLinear = mppi_MainNonLinear, mppi_IntLinear = mppi_IntLinear, 
@@ -253,17 +255,22 @@ invMCMC <- function(y, x, y_val = NULL, x_val = NULL, hyperpar = c(5, 5, 5, 5, 0
                     mppi_IntNonLinear = mppi_IntNonLinear, execution_time = execution_time, acc_rate = acc_rate, sigma = sigma)
       }
     } else {
+      # vorrei riportare anche tpr, fpr e matt separati per effetto
+      # lineare e non lineare
       if (!is.null(y_val)) {
         # return tpr, fpr, matt
         res <- list(linear_predictor = yhat, y_OutSample = y_tilde, y_tComp = y_tComplete,
                     LogLikelihood = ll, mse_inSample = mse_is, 
-                    mse_outSample = mse_os, tpr = tpr, fpr = fpr,
-                    matt = matt, execution_time = execution_time, acc_rate = acc_rate, sigma = sigma)
+                    mse_outSample = mse_os, tpr = tpr, tprML = tpr_MainLinear, tprMNL = tpr_MainNonLinear, tprIL = tpr_IntLinear, tprINL = tpr_IntNonLinear, fpr = fpr,
+                    fprML = fpr_MainLinear, fprMNL = fpr_MainNonLinear, fprIL = fpr_IntLinear, fprINL = fpr_IntNonLinear,
+                    matt = matt, mattML = matt_MainLinear, mattMNL = matt_MainNonLinear, mattIL = matt_IntLinear, mattINL = matt_IntNonLinear,
+                    execution_time = execution_time, acc_rate = acc_rate, sigma = sigma)
       } else {
         # return tpr, fpr, matt
         res <- list(linear_predictor = yhat, 
-                    LogLikelihood = ll, mse = mse_is, tpr = tpr, fpr = fpr,
-                    matt = matt, execution_time = execution_time, acc_rate = acc_rate, sigma = sigma)
+                    LogLikelihood = ll, mse = mse_is, tpr = tpr, tprML = tpr_MainLinear, tprMNL = tpr_MainNonLinear, tprIL = tpr_IntLinear, tprINL = tpr_IntNonLinear, fpr = fpr,
+                    fprML = fpr_MainLinear, fprMNL = fpr_MainNonLinear, fprIL = fpr_IntLinear, fprINL = fpr_IntNonLinear,
+                    matt = matt, mattML = matt_MainLinear, mattMNL = matt_MainNonLinear, mattIL = matt_IntLinear, mattINL = matt_IntNonLinear, execution_time = execution_time, acc_rate = acc_rate, sigma = sigma)
       }
     }
   }
