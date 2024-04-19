@@ -26,7 +26,7 @@ double updateInterceptC(arma::vec y, int nobs, arma::vec lp_noInt, double sigma)
 // M scalar
 // [[Rcpp::export]]
 double update_mCsca(double xi) {
-  double m = 1/(1+exp(-2*xi));
+  double m = 1.0/(1.0+exp(-2.0*xi));
   return m;
 }
 
@@ -36,7 +36,7 @@ arma::vec update_mCvec(arma::rowvec xi) {
   int n = arma::size(xi)(1);
   arma::vec m(n);
   for (int i = 0; i<n; i++) {
-    m(i) = 1/(1+exp(-2*xi(i)));
+    m(i) = 1.0/(1.0+exp(-2.0*xi(i)));
   }
   return m;
 }
@@ -44,7 +44,7 @@ arma::vec update_mCvec(arma::rowvec xi) {
 // TAU
 // [[Rcpp::export]]
 double update_tauC(double at, double bt, double alpha, double gamma) {
-  double tau = 1/(callrgamma(1, at+0.5, 1/(bt + pow(alpha, 2)/(2*gamma)))(0));
+  double tau = 1.0/(callrgamma(1, at+0.5, 1.0/(bt + pow(alpha, 2)/(2.0*gamma)))(0));
   return tau;
 }
 
@@ -93,7 +93,7 @@ double update_piSC(double ap, double bp, arma::mat gamma, double v0) {
 // SIGMA
 // [[Rcpp::export]]
 double update_sigmaC(arma::colvec y, arma::colvec eta_pl, double as, double bs, int nobs) {
-  double sigma = 1/(callrgamma(1, as + nobs/2, 1/(bs + arma::accu(pow((y - eta_pl), 2))/2))(0));
+  double sigma = 1.0/(callrgamma(1, as + nobs/2.0, 1.0/(bs + arma::accu(pow((y - eta_pl), 2))/2.0))(0));
   return sigma;
 }
 
@@ -101,19 +101,19 @@ double update_sigmaC(arma::colvec y, arma::colvec eta_pl, double as, double bs, 
 // [[Rcpp::export]]
 double update_gammaScaC(double pi, double v0, double alpha, double tau) {
   double gamma_out = 0;
-  double prob = 0;
-  double d1 = log(pi/(1-pi)) + log(v0) * 1/2;
-  double d2 = (1 - v0) / (2 * v0);
+  double prob = 0.0;
+  double d1 = log(pi/(1.0-pi)) + log(v0) * 1.0/2.0;
+  double d2 = (1.0 - v0) / (2.0 * v0);
   double out = exp(d1 + d2 * pow(alpha, 2)/tau);
   if (out > 10000) {
-    prob = 1;
+    prob = 1.0;
     gamma_out = 1;
   } else {
     if (out < 0.00001) {
-      prob = 0;
+      prob = 0.0;
       gamma_out = v0;
     } else {
-      prob = out / (1 + out);
+      prob = out / (1.0 + out);
       double samp = R::runif(0,1);
       if (samp < prob) {
         gamma_out = 1;
@@ -130,20 +130,20 @@ double update_gammaScaC(double pi, double v0, double alpha, double tau) {
 arma::vec update_gammaVecC(double pi, double v0, arma::vec alpha, arma::vec tau) {
   int p = alpha.n_elem;
   arma::vec gamma_out(p);
-  double prob = 0;
-  double d1 = log(pi/(1-pi)) + log(v0) * 1/2;
-  double d2 = (1 - v0) / (2 * v0);
+  double prob = 0.0;
+  double d1 = log(pi/(1.0-pi)) + log(v0) * 1.0/2.0;
+  double d2 = (1.0 - v0) / (2.0 * v0);
   for (int j = 0; j<p; j++) {
     double out = exp(d1 + d2 * pow(alpha(j), 2)/tau(j));
     if (out > 10000) {
-      prob = 1;
+      prob = 1.0;
       gamma_out(j) = 1;
     } else {
       if (out < 0.00001) {
-        prob = 0;
+        prob = 0.0;
         gamma_out(j) = v0;
       } else {
-        prob = out / (1 + out);
+        prob = out / (1.0 + out);
         double samp = R::runif(0,1);
         if (samp < prob) {
           gamma_out(j) = 1;
@@ -302,52 +302,52 @@ List bodyMCMC(arma::vec y, int p, int nobs, arma::vec cd, arma::vec d, arma::mat
   arma::mat tau_star_l(p,p);
   for (int j = 0; j<p; j++) {
     for (int k = (j+1); k<p; k++) {
-      tau_star_l(j,k) = 1/callrgamma(1,1,1)(0);
+      tau_star_l(j,k) = 1.0/callrgamma(1,1,1)(0);
     }
   }
   // tau star non linear
   arma::mat tau_star_nl(nlp,nlp);
   for (int j = 0; j<nlp; j++) {
     for (int k = (j+1); k<nlp; k++) {
-      tau_star_nl(j,k) = 1/callrgamma(1,1,1)(0);
+      tau_star_nl(j,k) = 1.0/callrgamma(1,1,1)(0);
     }
   }
   // tau linear (variance vector)
   arma::vec tau_0_l(p);
   for (int j = 0; j<p; j++) {
-    tau_0_l(j) = 1/callrgamma(1, 1, 1)(0);
+    tau_0_l(j) = 1.0/callrgamma(1, 1, 1)(0);
   }
   // tau non linear (variance vector)
   arma::vec tau_0_nl(nlp);
   for (int j = 0; j<nlp; j++) {
-    tau_0_nl(j) = 1/callrgamma(1, 1, 1)(0);
+    tau_0_nl(j) = 1.0/callrgamma(1, 1, 1)(0);
   }
   // alpha star linear square matrix of dimension p (for interaction)
   arma::mat alpha_star_l(p,p);
   for (int j = 0; j<p; j++) {
     for (int k = (j+1); k<p; k++) {
-      alpha_star_l(j,k) = 0;
+      alpha_star_l(j,k) = 0.0;
     }
   }
   // Non linear
   arma::mat alpha_star_nl(nlp,nlp);
   for (int j = 0; j<nlp; j++) {
     for (int k = (j+1); k<nlp; k++) {
-      alpha_star_nl(j,k) = 0;
+      alpha_star_nl(j,k) = 0.0;
     }
   }
   // xi star linear (square upper trinangular matrix of dimension p)
   arma::mat xi_star_l(p,p);
   for (int j = 0; j<p; j++) {
     for (int k = (j+1); k<p; k++) {
-      xi_star_l(j,k) = 1;
+      xi_star_l(j,k) = 1.0;
     }
   }
   // xi star non linear, matrix of dimension pxq where q is the sum of the basis
   arma::mat xi_star_nl(nlp,q);
   for (int j = 0; j<nlp; j++) {
     for (int k = (j+1); k<q; k++) {
-      xi_star_nl(j, k) = 1;
+      xi_star_nl(j, k) = 1.0;
     }
   }
   // omega linear
@@ -398,7 +398,7 @@ List bodyMCMC(arma::vec y, int p, int nobs, arma::vec cd, arma::vec d, arma::mat
   // intercept
   double eta0 = R::rnorm(0, 1);
   // variance of the normal model
-  double sigma = 1/callrgamma(1, 1, 1)(0);
+  double sigma = 1.0/callrgamma(1, 1, 1)(0);
   // Linear Predictor
   arma::vec eta_pl = compLinPred(nobs, eta0, X_l, beta_l, X_nl, beta_nl);
   // index for storage
