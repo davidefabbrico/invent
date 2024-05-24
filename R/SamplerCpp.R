@@ -29,7 +29,7 @@ my_cm <- function(sel, true) {
 #' @export
 
 ##### ------------------------------------------------------------------ ######
-invMCMC <- function(y, x, y_val = NULL, x_val = NULL, hyperpar = c(5, 5, 5, 5, 0.00025, 0.4, 1.6, 0.2, 1.8, 0.4, 1.6, 0.2, 1.8), 
+invMCMC <- function(y, x, y_val = NULL, x_val = NULL, hyperpar = c(3, 1, 1, 1, 0.00025, 0.4, 1.6, 0.2, 1.8, 0.4, 1.6, 0.2, 1.8), 
                     mht = c(1.4, 0.8, 1, 0.3, 0.7, 0.4, 4, 2.5), 
                     rank = 0.95, iter = 10000, burnin = iter/2, thin = 5, ha = 2, 
                     detail = FALSE, data = NULL, pb = TRUE) {
@@ -65,9 +65,13 @@ invMCMC <- function(y, x, y_val = NULL, x_val = NULL, hyperpar = c(5, 5, 5, 5, 0
     }       
   }
   # linear covariates transformation
+  linearIndex <- c()
+  iLin <- 0
   for(j in 1:p) {
     xj <- dx[,j]
     if (all(xj == as.integer(xj))) {
+      linearIndex[iLin] <- j
+      iLin <- iLin + 1
       X <- cbind(X, xj)
       n_cat <- n_cat + 1
       X_lin <- cbind(X_lin, xj)
@@ -87,6 +91,8 @@ invMCMC <- function(y, x, y_val = NULL, x_val = NULL, hyperpar = c(5, 5, 5, 5, 0
     X_nl <- X_nlin
     X_val_nl <- matrix(0, nrow = 0, ncol = 0)
   }
+  
+  # given that I apply the function lin, the columns are not in the right order
   
   # Call the C++ function
   result = bodyMCMC(as.vector(y), as.integer(p), as.integer(nobs), as.vector(cd),

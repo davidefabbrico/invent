@@ -251,6 +251,9 @@ arma::vec compLinPred(int nobs, double eta0, arma::mat X_l, arma::mat beta_l, ar
 // Body MCMC
 // [[Rcpp::export]]
 List bodyMCMC(arma::vec y, int p, int nobs, arma::vec cd, arma::vec d, arma::mat X_l, arma::mat X_nl, arma::mat X_val_l, arma::mat X_val_nl, arma::vec hyperpar, arma::vec mht, int n_cat, int iter, int burnin, int thin, int ha, bool detail = false, bool pb = true) {
+  if (thin <= 0) {
+    cout << "Look at the thin value, it must be greater than 0" << "\n";
+  }
   // Time 
   auto start = std::chrono::high_resolution_clock::now();
   ////////////////////////////////////////////////////
@@ -1202,20 +1205,24 @@ List bodyMCMC(arma::vec y, int p, int nobs, arma::vec cd, arma::vec d, arma::mat
                           Named("acc_xi_nl") = xi_nl_acc/iter);
   if (detail == true) {
     return List::create(Named("d") = d,
+                        Named("X_lin") = X_l,
+                        Named("X_nl") = X_nl,
                         // Named("intercept") = ETA0,
                         Named("linear_predictor") = ETA_PL,
-                        Named("Beta_l") = BETA_l,
-                        Named("Beta_nl") = BETA_nl,
+                        // Named("Beta_l") = BETA_l,
+                        // Named("Beta_nl") = BETA_nl,
                         Named("alpha_0_l") = ALPHA_0_l,
                         Named("alpha_0_nl") = ALPHA_0_nl,
-                        Named("alpha_star_l") = ALPHA_S_l,
-                        Named("alpha_star_nl") = ALPHA_S_nl,
+                        // Named("alpha_star_l") = ALPHA_S_l,
+                        // Named("alpha_star_nl") = ALPHA_S_nl,
                         // Named("m_l") = M_l,
                         // Named("m_nl") = M_nl,
                         // Named("m_star_l") = M_S_l,
                         // Named("m_star_nl") = M_S_nl,
-                        // Named("xi_l") = XI_l,
-                        // Named("xi_nl") = XI_nl,
+                        Named("xi_l") = XI_l,
+                        Named("xi_nl") = XI_nl,
+                        Named("omega_l") = OMEGA_l,
+                        Named("omega_nl") = OMEGA_nl,
                         // Named("xi_star_l") = XI_S_l,
                         // Named("xi_star_nl") = XI_S_nl,
                         // Named("tau_0_l") = TAU_0_l,
