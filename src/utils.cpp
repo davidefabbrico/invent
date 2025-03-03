@@ -11,20 +11,20 @@ using namespace std;
 
 // [[Rcpp::depends(RcppArmadillo)]]
 
+// Function to generate 'n' random numbers from a Gamma(shape, scale) distribution.  
+// Uses arma::randg(), which samples from a Gamma distribution with the specified  
+// shape and scale parameters. The function returns an Armadillo vector containing  
+// the generated random values.  
+// arma::randg() generate random numbers from Gamma distribution
 arma::vec callrgamma(int n, double shape, double scale) {
-  // Function to generate 'n' random numbers from a Gamma(shape, scale) distribution.  
-  // Uses arma::randg(), which samples from a Gamma distribution with the specified  
-  // shape and scale parameters. The function returns an Armadillo vector containing  
-  // the generated random values.  
-  // arma::randg() generate random numbers from Gamma distribution
   return arma::randg(n, arma::distr_param(shape, scale));
 }
 
+// Function to generate a random number from a normal distribution with  
+// a given mean and standard deviation.  
+// Uses arma::randn(), which samples from a standard normal distribution (mean = 0, stddev = 1),  
+// then scales and shifts the value to match the specified mean and standard deviation.  
 double generate_normal(double mean, double stddev) {
-  // Function to generate a random number from a normal distribution with  
-  // a given mean and standard deviation.  
-  // Uses arma::randn(), which samples from a standard normal distribution (mean = 0, stddev = 1),  
-  // then scales and shifts the value to match the specified mean and standard deviation.  
   return mean + stddev * arma::randn();
 }
 
@@ -62,10 +62,10 @@ double update_tauC(double at, double bt, double alpha, double gamma) {
 }
 
 // DELTA F Non sctructured
+// Function to count the occurrences of a specific value in a given Armadillo vector.  
+// Iterates through the vector 'x' and increments the counter 'count' each time  
+// an element matches the specified value 'val'. Returns the total count of occurrences.  
 int deltaFNSC(arma::vec x, double val) {
-  // Function to count the occurrences of a specific value in a given Armadillo vector.  
-  // Iterates through the vector 'x' and increments the counter 'count' each time  
-  // an element matches the specified value 'val'. Returns the total count of occurrences.  
   int count = 0;
   int n = x.n_elem;
   for (int i = 0; i < n; i++) {
@@ -77,12 +77,12 @@ int deltaFNSC(arma::vec x, double val) {
 }
 
 // DELTA F
+// Function to count the occurrences of a specific value in the upper triangular  
+// part (excluding the diagonal) of a given Armadillo matrix.  
+// Iterates over all unique element pairs (j, k) where j < k and increments  
+// the counter 'count' each time an element matches the specified value 'val'.  
+// Returns the total count of occurrences.  
 int deltaFSC(arma::mat x, double val) {
-  // Function to count the occurrences of a specific value in the upper triangular  
-  // part (excluding the diagonal) of a given Armadillo matrix.  
-  // Iterates over all unique element pairs (j, k) where j < k and increments  
-  // the counter 'count' each time an element matches the specified value 'val'.  
-  // Returns the total count of occurrences.  
   int count = 0;
   int n = arma::size(x)(0);
   for (int j = 0; j<(n-1); j++) {
@@ -95,11 +95,11 @@ int deltaFSC(arma::mat x, double val) {
   return count;
 }
 
-// Sample from a Beta distribution
+// Function to sample from a Beta(alpha, beta) distribution using the relationship:
+// If X ~ Gamma(alpha, 1) and Y ~ Gamma(beta, 1),
+// then Z = X / (X + Y) follows a Beta(alpha, beta) distribution.
 arma::vec rbeta_arma(int n, double alpha, double beta) {
-  // Function to sample from a Beta(alpha, beta) distribution using the relationship:
-  // If X ~ Gamma(alpha, 1) and Y ~ Gamma(beta, 1),
-  // then Z = X / (X + Y) follows a Beta(alpha, beta) distribution.
+  // Sample from a Beta distribution
   arma::vec X = arma::randg<arma::vec>(n, arma::distr_param(alpha, 1.0));
   arma::vec Y = arma::randg<arma::vec>(n, arma::distr_param(beta, 1.0));
   return X / (X + Y);
@@ -128,14 +128,14 @@ double update_sigmaC(arma::colvec y, arma::colvec eta_pl, double as, double bs, 
   return sigma;
 }
 
-// GAMMA Scalar
+// Function to update the value of gamma based on the given parameters pi, v0, alpha, and tau.  
+// The function first computes two intermediate variables, d1 and d2, based on the input parameters.  
+// It then calculates 'out', which is used to determine the probability (prob) of gamma being updated to 1.  
+// If 'out' is very large or very small, the function sets gamma_out to 1 or v0, respectively.  
+// Otherwise, it uses a random sample to decide whether gamma_out should be updated to 1 or remain at v0.  
+// Returns the updated value of gamma_out as a scalar.  
 double update_gammaScaC(double pi, double v0, double alpha, double tau) {
-  // Function to update the value of gamma based on the given parameters pi, v0, alpha, and tau.  
-  // The function first computes two intermediate variables, d1 and d2, based on the input parameters.  
-  // It then calculates 'out', which is used to determine the probability (prob) of gamma being updated to 1.  
-  // If 'out' is very large or very small, the function sets gamma_out to 1 or v0, respectively.  
-  // Otherwise, it uses a random sample to decide whether gamma_out should be updated to 1 or remain at v0.  
-  // Returns the updated value of gamma_out as a scalar.  
+  // Update the GAMMA Scalar
   double gamma_out = 0;
   double prob = 0.0;
   double d1 = log(pi/(1.0-pi)) + log(v0) * 1.0/2.0;
@@ -161,14 +161,15 @@ double update_gammaScaC(double pi, double v0, double alpha, double tau) {
   return gamma_out;
 }
 
-// GAMMA Vector
+
+// Function to update the value of gamma based on the given parameters pi, v0, alpha, and tau.  
+// The function first computes two intermediate variables, d1 and d2, based on the input parameters.  
+// It then calculates 'out', which is used to determine the probability (prob) of gamma being updated to 1.  
+// If 'out' is very large or very small, the function sets gamma_out to 1 or v0, respectively.  
+// Otherwise, it uses a random sample to decide whether gamma_out should be updated to 1 or remain at v0.  
+// Returns the updated value of gamma_out as a vector.
 arma::vec update_gammaVecC(double pi, double v0, arma::vec alpha, arma::vec tau) {
-  // Function to update the value of gamma based on the given parameters pi, v0, alpha, and tau.  
-  // The function first computes two intermediate variables, d1 and d2, based on the input parameters.  
-  // It then calculates 'out', which is used to determine the probability (prob) of gamma being updated to 1.  
-  // If 'out' is very large or very small, the function sets gamma_out to 1 or v0, respectively.  
-  // Otherwise, it uses a random sample to decide whether gamma_out should be updated to 1 or remain at v0.  
-  // Returns the updated value of gamma_out as a vector.
+  // Update the GAMMA Vector
   int p = alpha.n_elem;
   arma::vec gamma_out(p);
   double prob = 0.0;
@@ -197,20 +198,20 @@ arma::vec update_gammaVecC(double pi, double v0, arma::vec alpha, arma::vec tau)
   return gamma_out;
 }
 
+// Function to compute the log of the probability density function (PDF) of a normal distribution.  
+// The function takes the value 'x', the mean 'mean', and the standard deviation 'sd' as inputs.  
+// It calculates the log of the normal distribution's PDF using the formula:
+// log(PDF) = -0.5 * (log(2 * pi) + 2 * log(sd) + ((x - mean) / sd)^2)  
+// Returns the computed log-PDF value for the given inputs.  
 double normal_log_pdf(double x, double mean, double sd) {
-  // Function to compute the log of the probability density function (PDF) of a normal distribution.  
-  // The function takes the value 'x', the mean 'mean', and the standard deviation 'sd' as inputs.  
-  // It calculates the log of the normal distribution's PDF using the formula:
-  // log(PDF) = -0.5 * (log(2 * pi) + 2 * log(sd) + ((x - mean) / sd)^2)  
-  // Returns the computed log-PDF value for the given inputs.  
   return -0.5 * (std::log(2 * M_PI) + 2 * std::log(sd) + std::pow((x - mean) / sd, 2));
 }
 
+// Function to compute the log of the probability density function (log-PDF) of a normal distribution  
+// for each element in a given vector 'x', using corresponding means from the 'means' vector and a shared standard deviation 'sds'.  
+// For each element x(i), the log-PDF is calculated using the 'normal_log_pdf' function.  
+// The result is stored in a new vector 'res', which is returned as the output.  
 arma::vec dnormLogVec(arma::vec x, arma::vec means, double sds) {
-  // Function to compute the log of the probability density function (log-PDF) of a normal distribution  
-  // for each element in a given vector 'x', using corresponding means from the 'means' vector and a shared standard deviation 'sds'.  
-  // For each element x(i), the log-PDF is calculated using the 'normal_log_pdf' function.  
-  // The result is stored in a new vector 'res', which is returned as the output.  
   int n = x.n_elem;
   arma::vec res(n);
   for(int i = 0; i < n; i++) {
@@ -221,12 +222,12 @@ arma::vec dnormLogVec(arma::vec x, arma::vec means, double sds) {
 }
 
 // ALPHA
+// Function to update the value of the parameter alpha using a Metropolis-Hastings step.  
+// The function computes the log-likelihood for the current and proposed values of alpha and uses them to calculate the acceptance ratio.  
+// It then compares the ratio with a random sample from a uniform distribution to decide whether to accept or reject the new alpha value.  
+// The function returns a List containing the updated value of alpha and the acceptance indicator (1 if accepted, 0 otherwise).  
 List update_alphaC(arma::vec y, double sigma, double tau, double gamma, 
                    arma::vec eta_star, arma::vec eta_pl, double alpha_star, double alpha) {
-  // Function to update the value of the parameter alpha using a Metropolis-Hastings step.  
-  // The function computes the log-likelihood for the current and proposed values of alpha and uses them to calculate the acceptance ratio.  
-  // It then compares the ratio with a random sample from a uniform distribution to decide whether to accept or reject the new alpha value.  
-  // The function returns a List containing the updated value of alpha and the acceptance indicator (1 if accepted, 0 otherwise).  
   int acc_alpha = 0;
   double a = arma::accu(dnormLogVec(y, eta_star, sqrt(sigma)));
   double b = normal_log_pdf(alpha_star, 0, sqrt(tau*gamma));// R::dnorm(alpha_star, 0, sqrt(tau*gamma), TRUE);
@@ -246,12 +247,12 @@ List update_alphaC(arma::vec y, double sigma, double tau, double gamma,
 }
 
 // XI Linear
+// Function to update the value of the parameter xi using a Metropolis-Hastings step.  
+// The function computes the log-likelihood for the current and proposed values of xi and calculates the acceptance ratio.  
+// It then compares the ratio with a random sample from a uniform distribution to decide whether to accept or reject the new xi value.  
+// The function returns a List containing the updated value of xi and the acceptance indicator (1 if accepted, 0 otherwise).  
 List update_xiLC(arma::vec y, arma::colvec eta_star, arma::colvec eta_pl, 
                  double sigma, double m, double xi_star, double xi) {
-  // Function to update the value of the parameter xi using a Metropolis-Hastings step.  
-  // The function computes the log-likelihood for the current and proposed values of xi and calculates the acceptance ratio.  
-  // It then compares the ratio with a random sample from a uniform distribution to decide whether to accept or reject the new xi value.  
-  // The function returns a List containing the updated value of xi and the acceptance indicator (1 if accepted, 0 otherwise).  
   int acc_xi = 0;
   double num_xi = arma::accu(dnormLogVec(y, eta_star, sqrt(sigma))) + normal_log_pdf(xi_star, m, 1); // R::dnorm(xi_star, m, 1, TRUE);
   double den_xi = arma::accu(dnormLogVec(y, eta_pl, sqrt(sigma))) + normal_log_pdf(xi_star, m, 1); // R::dnorm(xi, m, 1, TRUE);
@@ -270,12 +271,12 @@ List update_xiLC(arma::vec y, arma::colvec eta_star, arma::colvec eta_pl,
 }
 
 // XI NonLinear
+// Function to update the parameter xi (vector) using a Metropolis-Hastings step for multiple elements.  
+// The function computes the log-likelihood for the current and proposed values of xi (as vectors) and calculates the acceptance ratio.  
+// It then compares the ratio with a random sample from a uniform distribution to decide whether to accept or reject the new xi values.  
+// The function returns a List containing the updated value of xi (as a vector) and the acceptance indicator for each element of xi (1 if accepted, 0 otherwise).  
 List update_xiNLC(arma::vec y, arma::vec eta_star, arma::vec eta_pl, double sigma, 
                   arma::vec m, arma::vec xi_star, arma::vec xi) {
-  // Function to update the parameter xi (vector) using a Metropolis-Hastings step for multiple elements.  
-  // The function computes the log-likelihood for the current and proposed values of xi (as vectors) and calculates the acceptance ratio.  
-  // It then compares the ratio with a random sample from a uniform distribution to decide whether to accept or reject the new xi values.  
-  // The function returns a List containing the updated value of xi (as a vector) and the acceptance indicator for each element of xi (1 if accepted, 0 otherwise).  
   int dj = xi_star.n_elem;
   arma::vec acc_xi(dj);
   double num_xi = arma::accu(dnormLogVec(y, eta_star, sqrt(sigma))) + arma::accu(dnormLogVec(xi_star, m, 1));
@@ -320,13 +321,12 @@ arma::vec compLinPred(int nobs, double eta0, arma::mat X_l, arma::mat beta_l,
 
 // Body MCMC
 // [[Rcpp::export]]
+// Function to perform a Markov Chain Monte Carlo (MCMC) process to sample from a posterior distribution.
+// The function uses the provided input data and hyperparameters to run the MCMC algorithm for the specified number of iterations, 
+// with options for burn-in and thinning to improve sampling efficiency. It also includes options for tracking progress and printing detailed results.
 List bodyMCMC(arma::vec y, int p, int nobs, arma::vec cd, arma::vec d, arma::mat X_l, arma::mat X_nl, 
               arma::mat X_val_l, arma::mat X_val_nl, arma::vec hyperpar, arma::vec mht, int n_cat, 
               int iter, int burnin, int thin, int ha, bool detail = false, bool pb = true) {
-  // Function to perform a Markov Chain Monte Carlo (MCMC) process to sample from a posterior distribution.
-  // The function uses the provided input data and hyperparameters to run the MCMC algorithm for the specified number of iterations, 
-  // with options for burn-in and thinning to improve sampling efficiency. It also includes options for tracking progress and printing detailed results.
-  //
   // **Inputs:**
   // - `y`: A vector containing the observed data (dependent variable) for the model.
   // - `p`: The number of model parameters (or predictors).
