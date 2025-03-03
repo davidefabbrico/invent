@@ -161,7 +161,7 @@ double update_gammaScaC(double pi, double v0, double alpha, double tau) {
   return gamma_out;
 }
 
-
+// Update GAMMA Vector
 // Function to update the value of gamma based on the given parameters pi, v0, alpha, and tau.  
 // The function first computes two intermediate variables, d1 and d2, based on the input parameters.  
 // It then calculates 'out', which is used to determine the probability (prob) of gamma being updated to 1.  
@@ -169,7 +169,6 @@ double update_gammaScaC(double pi, double v0, double alpha, double tau) {
 // Otherwise, it uses a random sample to decide whether gamma_out should be updated to 1 or remain at v0.  
 // Returns the updated value of gamma_out as a vector.
 arma::vec update_gammaVecC(double pi, double v0, arma::vec alpha, arma::vec tau) {
-  // Update the GAMMA Vector
   int p = alpha.n_elem;
   arma::vec gamma_out(p);
   double prob = 0.0;
@@ -296,9 +295,9 @@ List update_xiNLC(arma::vec y, arma::vec eta_star, arma::vec eta_pl, double sigm
 }
 
 // sign function
+// Function to compute the sign of a number. Returns 1 if x is positive, 
+// -1 if x is negative. If x is 0, the function returns 0.
 int mysign(double x) {
-  // Function to compute the sign of a number. Returns 1 if x is positive, 
-  // -1 if x is negative. If x is 0, the function returns 0.
   if (x < 0) {
     return -1;
   } else if (x > 0) {
@@ -319,14 +318,15 @@ arma::vec compLinPred(int nobs, double eta0, arma::mat X_l, arma::mat beta_l,
 }
 
 
-// Body MCMC
 // [[Rcpp::export]]
-// Function to perform a Markov Chain Monte Carlo (MCMC) process to sample from a posterior distribution.
-// The function uses the provided input data and hyperparameters to run the MCMC algorithm for the specified number of iterations, 
-// with options for burn-in and thinning to improve sampling efficiency. It also includes options for tracking progress and printing detailed results.
 List bodyMCMC(arma::vec y, int p, int nobs, arma::vec cd, arma::vec d, arma::mat X_l, arma::mat X_nl, 
               arma::mat X_val_l, arma::mat X_val_nl, arma::vec hyperpar, arma::vec mht, int n_cat, 
               int iter, int burnin, int thin, int ha, bool detail = false, bool pb = true) {
+  // Body MCMC
+  // Function to perform a Markov Chain Monte Carlo (MCMC) process to sample from a posterior distribution.
+  // The function uses the provided input data and hyperparameters to run the MCMC algorithm for the specified number of iterations, 
+  // with options for burn-in and thinning to improve sampling efficiency. It also includes options for tracking progress and printing detailed results.
+  //
   // **Inputs:**
   // - `y`: A vector containing the observed data (dependent variable) for the model.
   // - `p`: The number of model parameters (or predictors).
