@@ -74,13 +74,13 @@ gendata <- function(n_obs = 200, p = 10, minb = 1.5, maxb = 3.0, error = 0.01, s
   q <- sum(d)
   
   # Scenario 1
-  # Effetti principali lineari e interazioni lineari
+  # Linear main effect and linear interaction effect
   # Scenario 2
-  # Effetti principali lineari e interazioni non lineari
+  # Linear main effect and non-linear interaction effect
   # Scenario 3
-  # Effetti principali non lineari e interazioni lineari
+  # Non-linear main effect and linear interaction effect
   # Scenario 4
-  # Effetti principali non lineari e interazioni non lineari
+  # Non-linear main effect and non-linear interaction effect
   
   # alpha_0 main effect (linear)
   alpha_0_l <- matrix(0, nrow = n_obs, ncol = p)
@@ -101,22 +101,11 @@ gendata <- function(n_obs = 200, p = 10, minb = 1.5, maxb = 3.0, error = 0.01, s
       }
     }
   }
-  
-  # ipotesi, primo studio ipotesi semplici tutte possono essere rilassate
-  # generare scenario più reali. Un effetto principale non lineare sarà sempre
-  # composto da un effetto lineare e da uno non lineare, ovvero theta_j_tilde 
-  # diverso da 0 se e solo se theta_j_lin è diverso da 0. Un'altra iporesi è 
-  # strong eredity: modello generativo ma non nel codice che stima.
-  # Un termine di interazione è incluso se e solo se lo sono entrambi gli effetti
-  # principali che lo generano.
-  
-  # interaction omega parameter (beta star in thesis)
-  # quindi se ci sono gli effetti principali lineari ci sono anche quelli di interazione lineare
-  # non faccio nessun controllo per lo scenario
+  # interaction omega parameter (beta star in the manuscript)
   omega_l <- matrix(0, p, p)
   # linnc <- length(innc)
   # interaction <- matrix(0, length(innc), 2)
-  if (length(innc) != 1) { # si può anche eliminare
+  if (length(innc) != 1) {
     if (ha == 2) { # strong heredity
       for (i in 1:(p-1)) {
         for (j in (i+1):p) {
@@ -335,3 +324,8 @@ my_indices_int <- function(est, truth, linear = TRUE, d, omega_tilde){
   fpr <- contTable[1,2]/sum(contTable[,2])
   return(list(matt, tpr, fpr, sel))
 }
+
+# function for create the main plot 
+
+
+

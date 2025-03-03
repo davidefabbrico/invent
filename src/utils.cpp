@@ -11,28 +11,41 @@ using namespace std;
 
 // [[Rcpp::depends(RcppArmadillo)]]
 
-// [[Rcpp::export]]
-NumericVector callrgamma(int n, double shape, double scale) { 
-  return(rgamma(n, shape, scale)); 
+arma::vec callrgamma(int n, double shape, double scale) {
+  // Function to generate 'n' random numbers from a Gamma(shape, scale) distribution.  
+  // Uses arma::randg(), which samples from a Gamma distribution with the specified  
+  // shape and scale parameters. The function returns an Armadillo vector containing  
+  // the generated random values.  
+  // arma::randg() generate random numbers from Gamma distribution
+  return arma::randg(n, arma::distr_param(shape, scale));
+}
+
+double generate_normal(double mean, double stddev) {
+  // Function to generate a random number from a normal distribution with  
+  // a given mean and standard deviation.  
+  // Uses arma::randn(), which samples from a standard normal distribution (mean = 0, stddev = 1),  
+  // then scales and shifts the value to match the specified mean and standard deviation.  
+  return mean + stddev * arma::randn();
 }
 
 // INTERCEPT
-// [[Rcpp::export]]
 double updateInterceptC(arma::vec y, int nobs, arma::vec lp_noInt, double sigma) {
-  double intercept = R::rnorm(arma::accu(y-lp_noInt)/(nobs+1), sigma/(nobs+1));
+  // Function to update the intercept term. Returns the updated intercept value.  
+  // double intercept = R::rnorm(arma::accu(y-lp_noInt)/(nobs+1), sigma/(nobs+1));
+  double intercept = generate_normal(arma::accu(y-lp_noInt)/(nobs+1), sigma/(nobs+1));
   return intercept;
 }
 
 // M scalar
-// [[Rcpp::export]]
 double update_mCsca(double xi) {
+  // Function to update the m vector. Returns the updated m value as a scalar.
   double m = 1.0/(1.0+exp(-2.0*xi));
   return m;
 }
 
 // M vector
-// [[Rcpp::export]]
 arma::vec update_mCvec(arma::rowvec xi) {
+  // Function to update the m vector. Returns the updated m value as a vector.
   int n = arma::size(xi)(1);
   arma::vec m(n);
   for (int i = 0; i<n; i++) {
@@ -42,15 +55,17 @@ arma::vec update_mCvec(arma::rowvec xi) {
 }
 
 // TAU
-// [[Rcpp::export]]
 double update_tauC(double at, double bt, double alpha, double gamma) {
+  // Function to update the tau value. Returns the updated tau value.
   double tau = 1.0/(callrgamma(1, at+0.5, 1.0/(bt + pow(alpha, 2)/(2.0*gamma)))(0));
   return tau;
 }
 
-//DELTA F Non sctructured
-// [[Rcpp::export]]
+// DELTA F Non sctructured
 int deltaFNSC(arma::vec x, double val) {
+  // Function to count the occurrences of a specific value in a given Armadillo vector.  
+  // Iterates through the vector 'x' and increments the counter 'count' each time  
+  // an element matches the specified value 'val'. Returns the total count of occurrences.  
   int count = 0;
   int n = x.n_elem;
   for (int i = 0; i < n; i++) {
@@ -61,9 +76,13 @@ int deltaFNSC(arma::vec x, double val) {
   return count;
 }
 
-//DELTA F
-// [[Rcpp::export]]
+// DELTA F
 int deltaFSC(arma::mat x, double val) {
+  // Function to count the occurrences of a specific value in the upper triangular  
+  // part (excluding the diagonal) of a given Armadillo matrix.  
+  // Iterates over all unique element pairs (j, k) where j < k and increments  
+  // the counter 'count' each time an element matches the specified value 'val'.  
+  // Returns the total count of occurrences.  
   int count = 0;
   int n = arma::size(x)(0);
   for (int j = 0; j<(n-1); j++) {
@@ -76,30 +95,47 @@ int deltaFSC(arma::mat x, double val) {
   return count;
 }
 
+// Sample from a Beta distribution
+arma::vec rbeta_arma(int n, double alpha, double beta) {
+  // Function to sample from a Beta(alpha, beta) distribution using the relationship:
+  // If X ~ Gamma(alpha, 1) and Y ~ Gamma(beta, 1),
+  // then Z = X / (X + Y) follows a Beta(alpha, beta) distribution.
+  arma::vec X = arma::randg<arma::vec>(n, arma::distr_param(alpha, 1.0));
+  arma::vec Y = arma::randg<arma::vec>(n, arma::distr_param(beta, 1.0));
+  return X / (X + Y);
+}
+
 // PI Non structured
-// [[Rcpp::export]]
 double update_piNSC(double ap, double bp, arma::vec gamma, double v0) {
-  double pi = R::rbeta(ap + deltaFNSC(gamma, 1), bp + deltaFNSC(gamma, v0));
+  // Function to update the pi value (vector gamma). Returns the updated pi value.
+  double pi = rbeta_arma(1, ap + deltaFNSC(gamma, 1), bp + deltaFNSC(gamma, v0))(0);
+  // double pi = R::rbeta(ap + deltaFNSC(gamma, 1), bp + deltaFNSC(gamma, v0));
   return pi;
 }
 
 // PI Structured
-// [[Rcpp::export]]
 double update_piSC(double ap, double bp, arma::mat gamma, double v0) {
-  double pi = R::rbeta(ap + deltaFSC(gamma, 1), bp + deltaFSC(gamma, v0));
+  // Function to update the pi value (matrix gamma). Returns the updated pi value.
+  double pi = rbeta_arma(1, ap + deltaFSC(gamma, 1), bp + deltaFSC(gamma, v0))(0);
+  // double pi = R::rbeta(ap + deltaFSC(gamma, 1), bp + deltaFSC(gamma, v0));
   return pi;
 }
 
 // SIGMA
-// [[Rcpp::export]]
 double update_sigmaC(arma::colvec y, arma::colvec eta_pl, double as, double bs, int nobs) {
+  // Function to update the sigma value. Returns the updated sigma value.
   double sigma = 1.0/(callrgamma(1, as + nobs/2.0, 1.0/(bs + arma::accu(pow((y - eta_pl), 2))/2.0))(0));
   return sigma;
 }
 
 // GAMMA Scalar
-// [[Rcpp::export]]
 double update_gammaScaC(double pi, double v0, double alpha, double tau) {
+  // Function to update the value of gamma based on the given parameters pi, v0, alpha, and tau.  
+  // The function first computes two intermediate variables, d1 and d2, based on the input parameters.  
+  // It then calculates 'out', which is used to determine the probability (prob) of gamma being updated to 1.  
+  // If 'out' is very large or very small, the function sets gamma_out to 1 or v0, respectively.  
+  // Otherwise, it uses a random sample to decide whether gamma_out should be updated to 1 or remain at v0.  
+  // Returns the updated value of gamma_out as a scalar.  
   double gamma_out = 0;
   double prob = 0.0;
   double d1 = log(pi/(1.0-pi)) + log(v0) * 1.0/2.0;
@@ -114,7 +150,7 @@ double update_gammaScaC(double pi, double v0, double alpha, double tau) {
       gamma_out = v0;
     } else {
       prob = out / (1.0 + out);
-      double samp = R::runif(0,1);
+      double samp = arma::randu<arma::vec>(1)(0); // R::runif(0,1);
       if (samp < prob) {
         gamma_out = 1;
       } else {
@@ -126,8 +162,13 @@ double update_gammaScaC(double pi, double v0, double alpha, double tau) {
 }
 
 // GAMMA Vector
-// [[Rcpp::export]]
 arma::vec update_gammaVecC(double pi, double v0, arma::vec alpha, arma::vec tau) {
+  // Function to update the value of gamma based on the given parameters pi, v0, alpha, and tau.  
+  // The function first computes two intermediate variables, d1 and d2, based on the input parameters.  
+  // It then calculates 'out', which is used to determine the probability (prob) of gamma being updated to 1.  
+  // If 'out' is very large or very small, the function sets gamma_out to 1 or v0, respectively.  
+  // Otherwise, it uses a random sample to decide whether gamma_out should be updated to 1 or remain at v0.  
+  // Returns the updated value of gamma_out as a vector.
   int p = alpha.n_elem;
   arma::vec gamma_out(p);
   double prob = 0.0;
@@ -144,7 +185,7 @@ arma::vec update_gammaVecC(double pi, double v0, arma::vec alpha, arma::vec tau)
         gamma_out(j) = v0;
       } else {
         prob = out / (1.0 + out);
-        double samp = R::runif(0,1);
+        double samp = arma::randu<arma::vec>(1)(0); // R::runif(0,1);
         if (samp < prob) {
           gamma_out(j) = 1;
         } else {
@@ -156,26 +197,43 @@ arma::vec update_gammaVecC(double pi, double v0, arma::vec alpha, arma::vec tau)
   return gamma_out;
 }
 
-// [[Rcpp::export]]
+double normal_log_pdf(double x, double mean, double sd) {
+  // Function to compute the log of the probability density function (PDF) of a normal distribution.  
+  // The function takes the value 'x', the mean 'mean', and the standard deviation 'sd' as inputs.  
+  // It calculates the log of the normal distribution's PDF using the formula:
+  // log(PDF) = -0.5 * (log(2 * pi) + 2 * log(sd) + ((x - mean) / sd)^2)  
+  // Returns the computed log-PDF value for the given inputs.  
+  return -0.5 * (std::log(2 * M_PI) + 2 * std::log(sd) + std::pow((x - mean) / sd, 2));
+}
+
 arma::vec dnormLogVec(arma::vec x, arma::vec means, double sds) {
+  // Function to compute the log of the probability density function (log-PDF) of a normal distribution  
+  // for each element in a given vector 'x', using corresponding means from the 'means' vector and a shared standard deviation 'sds'.  
+  // For each element x(i), the log-PDF is calculated using the 'normal_log_pdf' function.  
+  // The result is stored in a new vector 'res', which is returned as the output.  
   int n = x.n_elem;
   arma::vec res(n);
   for(int i = 0; i < n; i++) {
-    res(i) = R::dnorm(x(i), means(i), sds, TRUE);
+    res(i) = normal_log_pdf(x(i), means(i), sds);
+    // res(i) = R::dnorm(x(i), means(i), sds, TRUE);
   }
   return res;
 }
 
 // ALPHA
-// [[Rcpp::export]]
-List update_alphaC(arma::vec y, double sigma, double tau, double gamma, arma::vec eta_star, arma::vec eta_pl, double alpha_star, double alpha) {
+List update_alphaC(arma::vec y, double sigma, double tau, double gamma, 
+                   arma::vec eta_star, arma::vec eta_pl, double alpha_star, double alpha) {
+  // Function to update the value of the parameter alpha using a Metropolis-Hastings step.  
+  // The function computes the log-likelihood for the current and proposed values of alpha and uses them to calculate the acceptance ratio.  
+  // It then compares the ratio with a random sample from a uniform distribution to decide whether to accept or reject the new alpha value.  
+  // The function returns a List containing the updated value of alpha and the acceptance indicator (1 if accepted, 0 otherwise).  
   int acc_alpha = 0;
   double a = arma::accu(dnormLogVec(y, eta_star, sqrt(sigma)));
-  double b = R::dnorm(alpha_star, 0, sqrt(tau*gamma), TRUE);
+  double b = normal_log_pdf(alpha_star, 0, sqrt(tau*gamma));// R::dnorm(alpha_star, 0, sqrt(tau*gamma), TRUE);
   double num_alpha = a+b;
-  double den_alpha = arma::accu(dnormLogVec(y, eta_pl, sqrt(sigma))) + R::dnorm(alpha, 0, sqrt(tau*gamma), TRUE);
+  double den_alpha = arma::accu(dnormLogVec(y, eta_pl, sqrt(sigma))) + normal_log_pdf(alpha, 0, sqrt(tau*gamma)); // R::dnorm(alpha, 0, sqrt(tau*gamma), TRUE);
   double ratio_alpha = num_alpha - den_alpha;
-  double lsamp = log(R::runif(0, 1));
+  double lsamp = std::log(arma::randu<arma::vec>(1)(0)); // log(R::runif(0, 1));
   double alpha_new = 0;
   if (ratio_alpha > lsamp) {
     acc_alpha = acc_alpha + 1;
@@ -188,13 +246,17 @@ List update_alphaC(arma::vec y, double sigma, double tau, double gamma, arma::ve
 }
 
 // XI Linear
-// [[Rcpp::export]]
-List update_xiLC(arma::vec y, arma::colvec eta_star, arma::colvec eta_pl, double sigma, double m, double xi_star, double xi) {
+List update_xiLC(arma::vec y, arma::colvec eta_star, arma::colvec eta_pl, 
+                 double sigma, double m, double xi_star, double xi) {
+  // Function to update the value of the parameter xi using a Metropolis-Hastings step.  
+  // The function computes the log-likelihood for the current and proposed values of xi and calculates the acceptance ratio.  
+  // It then compares the ratio with a random sample from a uniform distribution to decide whether to accept or reject the new xi value.  
+  // The function returns a List containing the updated value of xi and the acceptance indicator (1 if accepted, 0 otherwise).  
   int acc_xi = 0;
-  double num_xi = arma::accu(dnormLogVec(y, eta_star, sqrt(sigma))) + R::dnorm(xi_star, m, 1, TRUE);
-  double den_xi = arma::accu(dnormLogVec(y, eta_pl, sqrt(sigma))) + R::dnorm(xi, m, 1, TRUE);
+  double num_xi = arma::accu(dnormLogVec(y, eta_star, sqrt(sigma))) + normal_log_pdf(xi_star, m, 1); // R::dnorm(xi_star, m, 1, TRUE);
+  double den_xi = arma::accu(dnormLogVec(y, eta_pl, sqrt(sigma))) + normal_log_pdf(xi_star, m, 1); // R::dnorm(xi, m, 1, TRUE);
   double ratio_xi = num_xi - den_xi;
-  double lsamp = log(R::runif(0, 1));
+  double lsamp = std::log(arma::randu<arma::vec>(1)(0)); // log(R::runif(0, 1));
   double xi_new = 0;
   if (ratio_xi > lsamp) {
     acc_xi = acc_xi + 1;
@@ -208,14 +270,18 @@ List update_xiLC(arma::vec y, arma::colvec eta_star, arma::colvec eta_pl, double
 }
 
 // XI NonLinear
-// [[Rcpp::export]]
-List update_xiNLC(arma::vec y, arma::vec eta_star, arma::vec eta_pl, double sigma, arma::vec m, arma::vec xi_star, arma::vec xi) {
+List update_xiNLC(arma::vec y, arma::vec eta_star, arma::vec eta_pl, double sigma, 
+                  arma::vec m, arma::vec xi_star, arma::vec xi) {
+  // Function to update the parameter xi (vector) using a Metropolis-Hastings step for multiple elements.  
+  // The function computes the log-likelihood for the current and proposed values of xi (as vectors) and calculates the acceptance ratio.  
+  // It then compares the ratio with a random sample from a uniform distribution to decide whether to accept or reject the new xi values.  
+  // The function returns a List containing the updated value of xi (as a vector) and the acceptance indicator for each element of xi (1 if accepted, 0 otherwise).  
   int dj = xi_star.n_elem;
   arma::vec acc_xi(dj);
   double num_xi = arma::accu(dnormLogVec(y, eta_star, sqrt(sigma))) + arma::accu(dnormLogVec(xi_star, m, 1));
   double den_xi = arma::accu(dnormLogVec(y, eta_pl, sqrt(sigma))) + arma::accu(dnormLogVec(xi, m, 1));
   double ratio_xi = num_xi - den_xi;
-  double lsamp = log(R::runif(0, 1));
+  double lsamp = std::log(arma::randu<arma::vec>(1)(0)); // log(R::runif(0, 1));
   arma::vec xi_new;
   if (ratio_xi > lsamp) {
     acc_xi = acc_xi + 1;
@@ -229,18 +295,22 @@ List update_xiNLC(arma::vec y, arma::vec eta_star, arma::vec eta_pl, double sigm
 }
 
 // sign function
-// [[Rcpp::export]]
 int mysign(double x) {
+  // Function to compute the sign of a number. Returns 1 if x is positive, 
+  // -1 if x is negative. If x is 0, the function returns 0.
   if (x < 0) {
     return -1;
-  } else {
+  } else if (x > 0) {
     return 1;
+  } else {
+    return 0;
   }
 }
 
 // Compute Linear Predictor
-// [[Rcpp::export]]
-arma::vec compLinPred(int nobs, double eta0, arma::mat X_l, arma::mat beta_l, arma::mat X_nl, arma::mat beta_nl) {
+arma::vec compLinPred(int nobs, double eta0, arma::mat X_l, arma::mat beta_l, 
+                      arma::mat X_nl, arma::mat beta_nl) {
+  // Function to compute the linear predictor for the linear and nonlinear components.
   arma::vec Eta0(nobs);
   arma::vec inter = Eta0.fill(eta0);
   arma::vec eta_pl = inter + arma::sum(X_l%beta_l, 1) + arma::sum(X_nl%beta_nl, 1);
@@ -250,7 +320,32 @@ arma::vec compLinPred(int nobs, double eta0, arma::mat X_l, arma::mat beta_l, ar
 
 // Body MCMC
 // [[Rcpp::export]]
-List bodyMCMC(arma::vec y, int p, int nobs, arma::vec cd, arma::vec d, arma::mat X_l, arma::mat X_nl, arma::mat X_val_l, arma::mat X_val_nl, arma::vec hyperpar, arma::vec mht, int n_cat, int iter, int burnin, int thin, int ha, bool detail = false, bool pb = true) {
+List bodyMCMC(arma::vec y, int p, int nobs, arma::vec cd, arma::vec d, arma::mat X_l, arma::mat X_nl, 
+              arma::mat X_val_l, arma::mat X_val_nl, arma::vec hyperpar, arma::vec mht, int n_cat, 
+              int iter, int burnin, int thin, int ha, bool detail = false, bool pb = true) {
+  // Function to perform a Markov Chain Monte Carlo (MCMC) process to sample from a posterior distribution.
+  // The function uses the provided input data and hyperparameters to run the MCMC algorithm for the specified number of iterations, 
+  // with options for burn-in and thinning to improve sampling efficiency. It also includes options for tracking progress and printing detailed results.
+  //
+  // **Inputs:**
+  // - `y`: A vector containing the observed data (dependent variable) for the model.
+  // - `p`: The number of model parameters (or predictors).
+  // - `nobs`: The total number of observations (data points) in the dataset.
+  // - `cd`: A vector representing the cumulative sum of the number of spline bases for the covariate.
+  // - `d`: A vector indicating the number of spline bases for each covariate.
+  // - `X_l`: A matrix of explanatory variables (covariates) for the linear component of the model.
+  // - `X_nl`: A matrix of explanatory variables (covariates) for the non-linear component of the model.
+  // - `X_val_l`: A matrix of validation covariates for the linear component.
+  // - `X_val_nl`: A matrix of validation covariates for the non-linear component.
+  // - `hyperpar`: A vector of hyperparameters that define the prior distribution for the model parameters.
+  // - `mht`: A vector containing Metropolis-Hastings-related parameters for proposing new values during sampling.
+  // - `n_cat`: The number of categories in a categorical variable (if applicable).
+  // - `iter`: The total number of iterations for the MCMC sampling process.
+  // - `burnin`: The number of initial iterations to discard during the burn-in period.
+  // - `thin`: The thinning interval, specifying how often to retain a sample (e.g., every 10th sample).
+  // - `ha`: The heredity assumption for the model, potentially defining relationships between variables.
+  // - `detail`: A boolean flag (default: false) indicating whether to retain all MCMC chain samples or not.
+  // - `pb`: A boolean flag (default: true) specifying whether to display a progress bar during sampling.
   if (thin <= 0) {
     cout << "Look at the thin value, it must be greater than 0" << "\n";
   }
@@ -268,13 +363,13 @@ List bodyMCMC(arma::vec y, int p, int nobs, arma::vec cd, arma::vec d, arma::mat
   // int q_val = arma::accu(d_val);
   arma::vec vecOnes = ones(nobs, 1);
   // pi star linear 
-  double pi_star_l = R::rbeta(1,1);
+  double pi_star_l = rbeta_arma(1, 1, 1)(0);  // R::rbeta(1,1);
   // pi star non linear
-  double pi_star_nl = R::rbeta(1,1);
+  double pi_star_nl = rbeta_arma(1, 1, 1)(0); // R::rbeta(1,1);
   // pi 0 linear
-  double pi_0_l = R::rbeta(1,1);
+  double pi_0_l = rbeta_arma(1, 1, 1)(0); // R::rbeta(1,1);
   // pi 0 non linear
-  double pi_0_nl = R::rbeta(1,1);
+  double pi_0_nl = rbeta_arma(1, 1, 1)(0); // R::rbeta(1,1);
   // gamma star linear
   // upper trinagular matrix
   arma::mat gamma_star_l(p,p);
@@ -357,9 +452,9 @@ List bodyMCMC(arma::vec y, int p, int nobs, arma::vec cd, arma::vec d, arma::mat
   arma::mat omega_l(p,p);
   // omega non linear
   arma::mat omega_nl(nlp,q);
-  // alpha 0 linear vector (theta in thesis)
+  // alpha 0 linear vector (theta in manuscript)
   arma::vec alpha_0_l(p); // = as<arma::vec>(wrap(Rcpp::rnorm(p, 0, 1)));
-  // alpha 0 non linear vector (theta in thesis)
+  // alpha 0 non linear vector (theta in the manuscript)
   arma::vec alpha_0_nl(nlp);
   // alpha linear
   arma::mat alpha_l(nobs, p);
@@ -367,28 +462,42 @@ List bodyMCMC(arma::vec y, int p, int nobs, arma::vec cd, arma::vec d, arma::mat
   arma::mat alpha_nl(nobs, nlp);
   // m star linear matrix of dimension pxp
   arma::mat m_star_l(p,p);
+  double rand_uniform;
+  double rand_uniform_neg1_to_1;
   for (int j = 0; j<p; j++) {
     for (int k = (j+1); k<p; k++) {
-      m_star_l(j,k) = mysign(R::runif(-1,1));
+      rand_uniform = arma::randu<arma::vec>(1)(0);
+      rand_uniform_neg1_to_1 = 2 * rand_uniform - 1;
+      m_star_l(j,k) = mysign(rand_uniform_neg1_to_1);
+      // m_star_l(j,k) = mysign(R::runif(-1,1));
     }
   }
   // m star non linear 
   arma::mat m_star_nl(nlp,q);
   for (int j = 0; j<nlp; j++) {
     for (int k = (j+1); k<q; k++) {
-      m_star_nl(j,k) = mysign(R::runif(-1,1));
+      rand_uniform = arma::randu<arma::vec>(1)(0);
+      rand_uniform_neg1_to_1 = 2 * rand_uniform - 1;
+      m_star_nl(j,k) = mysign(rand_uniform_neg1_to_1);
+      // m_star_nl(j,k) = mysign(R::runif(-1,1));
     }
   }
   // matrix with sign of dimension pxq
   // m linear vector
   arma::vec m_l(p);
   for (int j = 0; j<p; j++) {
-    m_l(j) = mysign(R::runif(-1, 1));
+    rand_uniform = arma::randu<arma::vec>(1)(0);
+    rand_uniform_neg1_to_1 = 2 * rand_uniform - 1;
+    m_l(j) = mysign(rand_uniform_neg1_to_1);
+    // m_l(j) = mysign(R::runif(-1, 1));
   }
   // m non linear vector
   arma::vec m_nl(q);
   for (int j = 0; j<q; j++) {
-    m_nl(j) = mysign(R::runif(-1, 1));
+    rand_uniform = arma::randu<arma::vec>(1)(0);
+    rand_uniform_neg1_to_1 = 2 * rand_uniform - 1;
+    m_nl(j) = mysign(rand_uniform_neg1_to_1);
+    // m_nl(j) = mysign(R::runif(-1, 1));
   }
   // xi linear
   arma::vec xi_l = arma::ones<arma::vec>(p);
@@ -399,7 +508,7 @@ List bodyMCMC(arma::vec y, int p, int nobs, arma::vec cd, arma::vec d, arma::mat
   // beta non linear
   arma::mat beta_nl(nobs, q);
   // intercept
-  double eta0 = R::rnorm(0, 1);
+  double eta0 = generate_normal(0, 1); // R::rnorm(0, 1);
   // variance of the normal model
   double sigma = 1.0/callrgamma(1, 1, 1)(0);
   // Linear Predictor
@@ -558,17 +667,17 @@ List bodyMCMC(arma::vec y, int p, int nobs, arma::vec cd, arma::vec d, arma::mat
             tau_star_l(j,k) = update_tauC(hyperpar(0), hyperpar(1), alpha_star_l(j,k), gamma_star_l(j,k));
             // update alpha star linear and non linear with a MH
             // proposed alpha
-            alpha_star_bar = alpha_star_l(j,k) + R::rnorm(0, mht(0));
+            alpha_star_bar = alpha_star_l(j,k) + generate_normal(0, mht(0)); // R::rnorm(0, mht(0));
             // compute the new beta_l (temp element)
             omega_l_tmp = omega_l;
             omega_l_tmp(j,k) = xi_star_l(j,k) * alpha_star_bar;
             // alpha_l_tmp = alpha_l;
-            // cambiamo la j,k
+            // change the j,k
             alpha_l_tmp.col(j) = alpha_0_l(j)*vecOnes;
             for (int kn = (j+1); kn<p; kn++) {
               alpha_l_tmp.col(j) = alpha_l_tmp.col(j) + X_l.col(kn)*omega_l_tmp(j,kn);
             }
-            // IMPORTANTE: calcolo di alpha
+            // IMPORTANT: computing alpha
             // ??? alpha_l_tmp.col(j) = alpha_0_l(j)*vecOnes +  X_l.cols(k, X_l.n_cols - 1)*omega_l_tmp(j, span(k, omega_l_tmp.n_cols - 1)).t();
             beta_l_tmp = beta_l;
             // compute linear beta
@@ -584,7 +693,7 @@ List bodyMCMC(arma::vec y, int p, int nobs, arma::vec cd, arma::vec d, arma::mat
             m_star_l(j,k) = update_mCsca(xi_star_l(j,k));
             // update xi star linear
             // proposed xi star
-            xi_star_bar = xi_star_l(j,k) + R::rnorm(0, mht(1));
+            xi_star_bar = xi_star_l(j,k) + generate_normal(0, mht(1)); // R::rnorm(0, mht(1));
             // compute the new beta_l (temp element)
             omega_l_tmp = omega_l;
             omega_l_tmp(j,k) =  alpha_star_l(j,k) * xi_star_bar;
@@ -614,12 +723,12 @@ List bodyMCMC(arma::vec y, int p, int nobs, arma::vec cd, arma::vec d, arma::mat
             tau_star_l(j,k) = update_tauC(hyperpar(0), hyperpar(1), alpha_star_l(j,k), gamma_star_l(j,k));
             // update alpha star linear and non linear with a MH
             // proposed alpha
-            alpha_star_bar = alpha_star_l(j,k) + R::rnorm(0, mht(0));
+            alpha_star_bar = alpha_star_l(j,k) + generate_normal(0, mht(0)); // R::rnorm(0, mht(0));
             // compute the new beta_l (temp element)
             omega_l_tmp = omega_l;
             omega_l_tmp(j,k) = xi_star_l(j,k) * alpha_star_bar;
             // alpha_l_tmp = alpha_l;
-            // cambiamo la j,k
+            // change the j,k
             alpha_l_tmp.col(j) = alpha_0_l(j)*vecOnes;
             for (int kn = (j+1); kn<p; kn++) {
               alpha_l_tmp.col(j) = alpha_l_tmp.col(j) + X_l.col(kn)*omega_l_tmp(j,kn);
@@ -638,7 +747,7 @@ List bodyMCMC(arma::vec y, int p, int nobs, arma::vec cd, arma::vec d, arma::mat
             m_star_l(j,k) = update_mCsca(xi_star_l(j,k));
             // update xi star linear
             // proposed xi star
-            xi_star_bar = xi_star_l(j,k) + R::rnorm(0, mht(1));
+            xi_star_bar = xi_star_l(j,k) + generate_normal(0, mht(1)); // R::rnorm(0, mht(1));
             // compute the new beta_l (temp element)
             omega_l_tmp = omega_l;
             omega_l_tmp(j,k) =  alpha_star_l(j,k) * xi_star_bar;
@@ -667,7 +776,7 @@ List bodyMCMC(arma::vec y, int p, int nobs, arma::vec cd, arma::vec d, arma::mat
           tau_star_l(j,k) = update_tauC(hyperpar(0), hyperpar(1), alpha_star_l(j,k), gamma_star_l(j,k));
           // update alpha star linear and non linear with a MH
           // proposed alpha
-          alpha_star_bar = alpha_star_l(j,k) + R::rnorm(0, mht(0));
+          alpha_star_bar = alpha_star_l(j,k) + generate_normal(0, mht(0)); // R::rnorm(0, mht(0));
           // compute the new beta_l (temp element)
           omega_l_tmp = omega_l;
           omega_l_tmp(j,k) = xi_star_l(j,k) * alpha_star_bar;
@@ -691,7 +800,7 @@ List bodyMCMC(arma::vec y, int p, int nobs, arma::vec cd, arma::vec d, arma::mat
           m_star_l(j,k) = update_mCsca(xi_star_l(j,k));
           // update xi star linear
           // proposed xi star
-          xi_star_bar = xi_star_l(j,k) + R::rnorm(0, mht(1));
+          xi_star_bar = xi_star_l(j,k) + generate_normal(0, mht(1)); // R::rnorm(0, mht(1));
           // compute the new beta_l (temp element)
           omega_l_tmp = omega_l;
           omega_l_tmp(j,k) =  alpha_star_l(j,k) * xi_star_bar;
@@ -748,7 +857,7 @@ List bodyMCMC(arma::vec y, int p, int nobs, arma::vec cd, arma::vec d, arma::mat
             tau_star_nl(j,k) = update_tauC(hyperpar(0), hyperpar(1), alpha_star_nl(j,k), gamma_star_nl(j,k));
             // update alpha non linear star
             // proposed alpha
-            alpha_star_bar = alpha_star_nl(j,k) + R::rnorm(0, mht(2));
+            alpha_star_bar = alpha_star_nl(j,k) + generate_normal(0, mht(2)); // R::rnorm(0, mht(2));
             omega_nl_tmp = omega_nl;
             omega_nl_tmp(j, span(cd[k], cd[k+1]-1)) = xi_star_nl(j, span(cd[k], cd[k+1]-1)) * alpha_star_bar;
             // alpha_nl_tmp = alpha_nl;
@@ -770,7 +879,7 @@ List bodyMCMC(arma::vec y, int p, int nobs, arma::vec cd, arma::vec d, arma::mat
             m_star_nl(j, span(cd[k], cd[k+1]-1)) = update_mCvec(xi_star_nl(j, span(cd[k], cd[k+1]-1))).t();
             // update xi star non linear
             // proposed xi star non linear
-            xi_star_bar_nl = xi_star_nl(j, span(cd[k], cd[k+1]-1)) + R::rnorm(0, mht(3));
+            xi_star_bar_nl = xi_star_nl(j, span(cd[k], cd[k+1]-1)) + generate_normal(0, mht(3)); // R::rnorm(0, mht(3));
             // compute the new beta 
             omega_nl_tmp = omega_nl;
             omega_nl_tmp(j, span(cd[k], cd[k+1]-1)) = alpha_star_nl(j,k)*xi_star_bar_nl;
@@ -803,7 +912,7 @@ List bodyMCMC(arma::vec y, int p, int nobs, arma::vec cd, arma::vec d, arma::mat
             tau_star_nl(j,k) = update_tauC(hyperpar(0), hyperpar(1), alpha_star_nl(j,k), gamma_star_nl(j,k));
             // update alpha non linear star
             // proposed alpha
-            alpha_star_bar = alpha_star_nl(j,k) + R::rnorm(0, mht(2));
+            alpha_star_bar = alpha_star_nl(j,k) + generate_normal(0, mht(2)); // R::rnorm(0, mht(2));
             omega_nl_tmp = omega_nl;
             omega_nl_tmp(j, span(cd[k], cd[k+1]-1)) = xi_star_nl(j, span(cd[k], cd[k+1]-1)) * alpha_star_bar;
             // alpha_nl_tmp = alpha_nl;
@@ -825,7 +934,7 @@ List bodyMCMC(arma::vec y, int p, int nobs, arma::vec cd, arma::vec d, arma::mat
             m_star_nl(j, span(cd[k], cd[k+1]-1)) = update_mCvec(xi_star_nl(j, span(cd[k], cd[k+1]-1))).t();
             // update xi star non linear
             // proposed xi star non linear
-            xi_star_bar_nl = xi_star_nl(j, span(cd[k], cd[k+1]-1)) + R::rnorm(0, mht(3));
+            xi_star_bar_nl = xi_star_nl(j, span(cd[k], cd[k+1]-1)) + generate_normal(0, mht(3)); // R::rnorm(0, mht(3));
             // compute the new beta 
             omega_nl_tmp = omega_nl;
             omega_nl_tmp(j, span(cd[k], cd[k+1]-1)) = alpha_star_nl(j,k)*xi_star_bar_nl;
@@ -857,7 +966,7 @@ List bodyMCMC(arma::vec y, int p, int nobs, arma::vec cd, arma::vec d, arma::mat
           tau_star_nl(j,k) = update_tauC(hyperpar(0), hyperpar(1), alpha_star_nl(j,k), gamma_star_nl(j,k));
           // update alpha non linear star
           // proposed alpha
-          alpha_star_bar = alpha_star_nl(j,k) + R::rnorm(0, mht(2));
+          alpha_star_bar = alpha_star_nl(j,k) + generate_normal(0, mht(2)); // R::rnorm(0, mht(2));
           omega_nl_tmp = omega_nl;
           omega_nl_tmp(j, span(cd[k], cd[k+1]-1)) = xi_star_nl(j, span(cd[k], cd[k+1]-1)) * alpha_star_bar;
           // alpha_nl_tmp = alpha_nl;
@@ -879,7 +988,7 @@ List bodyMCMC(arma::vec y, int p, int nobs, arma::vec cd, arma::vec d, arma::mat
           m_star_nl(j, span(cd[k], cd[k+1]-1)) = update_mCvec(xi_star_nl(j, span(cd[k], cd[k+1]-1))).t();
           // update xi star non linear
           // proposed xi star non linear
-          xi_star_bar_nl = xi_star_nl(j, span(cd[k], cd[k+1]-1)) + R::rnorm(0, mht(3));
+          xi_star_bar_nl = xi_star_nl(j, span(cd[k], cd[k+1]-1)) + generate_normal(0, mht(3)); // R::rnorm(0, mht(3));
           // compute the new beta 
           omega_nl_tmp = omega_nl;
           omega_nl_tmp(j, span(cd[k], cd[k+1]-1)) = alpha_star_nl(j,k)*xi_star_bar_nl;
@@ -934,14 +1043,13 @@ List bodyMCMC(arma::vec y, int p, int nobs, arma::vec cd, arma::vec d, arma::mat
     pi_0_nl = update_piNSC(hyperpar(7), hyperpar(8), gamma_0_nl, hyperpar(4));
     // update gamma 0 linear
     
-    // se ha = 2 e tolgo main j devo elimnare anche tutte le inerazioni che lo coinv.
-    // sia gamma
-    // se ha = 1 e tolgo main j allora devo assicurarmi che l'altro effetto principale 
-    // ci sia e altrimenti tolgo l'interazione
+    // If ha = 2 and I remove the main effect j, I must also eliminate all interactions 
+    // involving it, including gamma.
+    // If ha = 1 and I remove the main effect j, I must ensure that the other main effect 
+    // is present; otherwise, I remove the interaction.
     // gamma_0_l = update_gammaVecC(pi_0_l, hyperpar(4), alpha_0_l, tau_0_l);
     // update gamma 0 non linear
     // gamma_0_nl = update_gammaVecC(pi_0_nl, hyperpar(4), alpha_0_nl, tau_0_nl);
-    
     
     // update tau 0 linear
     for (int j = 0; j<p; j++) {
@@ -955,7 +1063,7 @@ List bodyMCMC(arma::vec y, int p, int nobs, arma::vec cd, arma::vec d, arma::mat
     // update alpha 0 linear
     for (int j = 0; j<p; j++) {
       // proposed alpha
-      alpha_0_bar = alpha_0_l(j) + R::rnorm(0, mht(4));
+      alpha_0_bar = alpha_0_l(j) + generate_normal(0, mht(4)); // R::rnorm(0, mht(4));
       // alpha_l_tmp = alpha_l;
       alpha_l_tmp.col(j) = alpha_0_bar*vecOnes;
       for (int k = (j+1); k<p; k++) {
@@ -975,7 +1083,7 @@ List bodyMCMC(arma::vec y, int p, int nobs, arma::vec cd, arma::vec d, arma::mat
     // update alpha 0 non linear
     for (int j = 0; j<nlp; j++) {
       // proposed alpha
-      alpha_0_bar = alpha_0_nl(j) + R::rnorm(0, mht(5));
+      alpha_0_bar = alpha_0_nl(j) + generate_normal(0, mht(5)); // R::rnorm(0, mht(5));
       // alpha_nl_tmp = alpha_nl;
       alpha_nl_tmp.col(j) = alpha_0_bar*vecOnes;
       for (int k = (j+1); k<nlp; k++) {
@@ -990,7 +1098,6 @@ List bodyMCMC(arma::vec y, int p, int nobs, arma::vec cd, arma::vec d, arma::mat
       int accAnlpha0 = ua0nl[1];
       alpha_0_nl_acc(j) = alpha_0_nl_acc(j) + accAnlpha0;
     }
-    
     // compute alpha linear
     for (int j = 0; j<p; j++) {
       alpha_l.col(j) = alpha_0_l(j)*vecOnes;
@@ -998,7 +1105,6 @@ List bodyMCMC(arma::vec y, int p, int nobs, arma::vec cd, arma::vec d, arma::mat
         alpha_l.col(j) = alpha_l.col(j) + X_l.col(k)*omega_l(j,k);
       }
     }
-    
     // compute alpha non linear
     for (int j = 0; j<nlp; j++) {
       alpha_nl.col(j) = alpha_0_nl(j)*vecOnes;
@@ -1006,21 +1112,18 @@ List bodyMCMC(arma::vec y, int p, int nobs, arma::vec cd, arma::vec d, arma::mat
         alpha_nl.col(j) = alpha_nl.col(j) + X_nl.cols(span(cd[k], cd[k+1]-1))*omega_nl(j, span(cd[k], cd[k+1]-1)).t();
       }
     }
-    
     // update m linear
     for (int j = 0; j<p; j++) {
       m_l(j) = update_mCsca(xi_l(j));
     }
-    
     // update m non linear
     for (int l = 0; l<q; l++) {
       m_nl(l) = update_mCsca(xi_nl(l));
     }
-    
     // update xi linear
     for (int j = 0; j<p; j++) {
       // proposed xi
-      xi_star = xi_l(j) + R::rnorm(0, mht(6));
+      xi_star = xi_l(j) + generate_normal(0, mht(6)); // R::rnorm(0, mht(6));
       // compute the new beta linear
       beta_l_tmp = beta_l; 
       beta_l_tmp.col(j) = alpha_l.col(j)*xi_star;
@@ -1032,9 +1135,9 @@ List bodyMCMC(arma::vec y, int p, int nobs, arma::vec cd, arma::vec d, arma::mat
       int acc_xil = uxl[1];
       xi_l_acc(j) = xi_l_acc(j) + acc_xil;
     }
-    
     // update xi non linear
-    xi_starnl = xi_nl + as<arma::vec>(wrap(Rcpp::rnorm(q, 0, mht(7))));
+    arma::vec xi_starnl = xi_nl + arma::randn<arma::vec>(q) * mht(7);
+    // xi_starnl = xi_nl + as<arma::vec>(wrap(Rcpp::rnorm(q, 0, mht(7))));
     for (int j = 0; j<nlp; j++) {
       // xi_starnl = xi_nl(span(cd[j], cd[j+1]-1)) + R::rnorm(0, mht(7));
       beta_nl_tmp = beta_nl; 
@@ -1046,7 +1149,6 @@ List bodyMCMC(arma::vec y, int p, int nobs, arma::vec cd, arma::vec d, arma::mat
       arma::vec accXinl = uxnl[1];
       xi_nl_acc(span(cd[j], cd[j+1]-1)) = xi_nl_acc(span(cd[j], cd[j+1]-1)) + accXinl;
     }
-    
     // rescale alpha and xi linear
     for (int j = 0; j<p; j++) {
       // scaling factor
@@ -1056,7 +1158,6 @@ List bodyMCMC(arma::vec y, int p, int nobs, arma::vec cd, arma::vec d, arma::mat
       // rescale alpha linear
       alpha_l.col(j) = alpha_l.col(j)/sFct;
     }
-    
     // rescale alpha and xi non linear
     for (int j = 0; j<nlp; j++) {
       // scaling factor
@@ -1066,7 +1167,6 @@ List bodyMCMC(arma::vec y, int p, int nobs, arma::vec cd, arma::vec d, arma::mat
       // rescale non linear alpha
       alpha_nl.col(j) = alpha_nl.col(j)/sFct;
     }
-    
     // update beta linear and non linear after rescaling alpha and xi
     // beta linear and non linear
     for (int j = 0; j<p; j++) {
@@ -1076,7 +1176,6 @@ List bodyMCMC(arma::vec y, int p, int nobs, arma::vec cd, arma::vec d, arma::mat
     for (int j = 0; j<nlp; j++) {
       beta_nl.cols(span(cd[j], cd[j+1]-1)) = alpha_nl.col(j)*xi_nl(span(cd[j], cd[j+1]-1)).t();
     }
-    
     // compute the linear predictor
     eta_pl = compLinPred(nobs, eta0, X_l, beta_l, X_nl, beta_nl);
     // update intercept
@@ -1162,7 +1261,7 @@ List bodyMCMC(arma::vec y, int p, int nobs, arma::vec cd, arma::vec d, arma::mat
         eta_pl_val = compLinPred(n_val, eta0, X_val_l, beta_val_l, X_val_nl, beta_val_nl);
         // y_tilde
         for (int i = 0; i<n_val; i++) {
-          y_tilde(i) = R::rnorm(eta_pl_val(i), sqrt(sigma));
+          y_tilde(i) = generate_normal(eta_pl_val(i), sqrt(sigma)); // R::rnorm(eta_pl_val(i), sqrt(sigma));
         }
         // if (detail == true) {
         //   Y_TILDE.row(idx) = y_tilde.t();
