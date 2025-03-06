@@ -329,7 +329,7 @@ List bodyMCMC(arma::vec y, int p, int nobs, arma::vec cd, arma::vec d, arma::mat
   //
   // **Inputs:**
   // - `y`: A vector containing the observed data (dependent variable) for the model.
-  // - `p`: The number of model parameters (or predictors).
+  // - `p`: The number of covariates.
   // - `nobs`: The total number of observations (data points) in the dataset.
   // - `cd`: A vector representing the cumulative sum of the number of spline bases for the covariate.
   // - `d`: A vector indicating the number of spline bases for each covariate.
@@ -339,10 +339,10 @@ List bodyMCMC(arma::vec y, int p, int nobs, arma::vec cd, arma::vec d, arma::mat
   // - `X_val_nl`: A matrix of validation covariates for the non-linear component.
   // - `hyperpar`: A vector of hyperparameters that define the prior distribution for the model parameters.
   // - `mht`: A vector containing Metropolis-Hastings-related parameters for proposing new values during sampling.
-  // - `n_cat`: The number of categories in a categorical variable (if applicable).
+  // - `n_cat`: The number of categorical variables in the dataset.
   // - `iter`: The total number of iterations for the MCMC sampling process.
   // - `burnin`: The number of initial iterations to discard during the burn-in period.
-  // - `thin`: The thinning interval, specifying how often to retain a sample (e.g., every 10th sample).
+  // - `thin`: The thinning interval, specifying how often to retain a sample.
   // - `ha`: The heredity assumption for the model, potentially defining relationships between variables.
   // - `detail`: A boolean flag (default: false) indicating whether to retain all MCMC chain samples or not.
   // - `pb`: A boolean flag (default: true) specifying whether to display a progress bar during sampling.

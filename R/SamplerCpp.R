@@ -1,26 +1,54 @@
+# Function: my_cm
+# This function computes the confusion matrix given the predicted labels (sel) and the true labels (true).
+# The confusion matrix is a 2x2 matrix that contains the following information:
+# - True Positives (TP): Number of cases where the prediction is 1 and the actual value is also 1.
+# - True Negatives (TN): Number of cases where the prediction is 0 and the actual value is 0.
+# - False Positives (FP): Number of cases where the prediction is 1 but the actual value is 0.
+# - False Negatives (FN): Number of cases where the prediction is 0 but the actual value is 1.
+#
+# Arguments:
+# - sel: A vector of predicted labels (either 0 or 1) for each observation.
+# - true: A vector of true labels (either 0 or 1) for each observation.
+#
+# Output:
+# - A 2x2 confusion matrix where:
+#   - The first row contains [True Negatives, False Positives]
+#   - The second row contains [False Negatives, True Positives]
+
 my_cm <- function(sel, true) {
+  # Initialize counts for True Positives (tp), True Negatives (tn), False Positives (fp), and False Negatives (fn)
   tp <- 0
   tn <- 0
   fp <- 0
   fn <- 0
   
+  # Get the length of the vectors (number of observations)
   p <- length(sel)
   
+  # Iterate over each element in the vectors to calculate the confusion matrix components
   for (j in 1:p) {
+    # Check for True Positives: predicted and actual are both 1
     if ((sel[j] == true[j]) & (true[j] == 1)) {
       tp <- tp + 1
     }
+    # Check for True Negatives: predicted and actual are both 0
     if ((sel[j] == true[j]) & (true[j] == 0)) {
       tn <- tn + 1
     }
+    # Check for False Positives: predicted is 1 but actual is 0
     if ((sel[j] != true[j]) & (true[j] == 0)) {
       fp <- fp + 1
     }
+    # Check for False Negatives: predicted is 0 but actual is 1
     if ((sel[j] != true[j]) & (true[j] == 1)) {
       fn <- fn + 1
     }
   }
+  
+  # Create a 2x2 matrix for the confusion matrix
   contTable <- matrix(c(tn, fp, fn, tp), nrow = 2, ncol = 2)
+  
+  # Return the confusion matrix
   return(contTable)
 }
 
@@ -260,3 +288,132 @@ invMCMC <- function(y, x, y_val = NULL, x_val = NULL, hyperpar = c(3, 1, 1, 1, 0
   
   return(res)
 }
+
+
+# Function to compute the Gelman-Rubin R-hat statistic
+# This function calculates the R-hat diagnostic to assess 
+# the convergence of multiple MCMC chains.
+# Input:
+# - chains: An array where each column represents an independent 
+#   MCMC chain, and each row corresponds to an iteration.
+# Output:
+# - A single R-hat value. If R-hat is close to 1, it suggests that 
+#   the chains have converged to the same distribution.
+gelman_rhat <- function(chains) {
+  # Number of chains (columns) and iterations (rows)
+  m <- dim(chains)[2]  # Number of chains
+  n <- dim(chains)[1]  # Number of iterations per chain
+  # Compute the mean for each chain
+  chain_means <- colMeans(chains)
+  # Compute the overall mean across all chains
+  global_mean <- mean(chain_means)
+  # Compute the between-chain variance (B)
+  B <- (n / (m - 1)) * sum((chain_means - global_mean)^2)
+  # Compute the within-chain variance (W)
+  W <- mean(apply(chains, 2, var))
+  # Estimate the marginal variance
+  var_hat <- ((n - 1) / n) * W + (1 / n) * B
+  # Compute the R-hat statistic
+  R_hat <- sqrt(var_hat / W)
+  return(R_hat)
+}
+
+# This function calculates the Effective Sample Size (ESS) of a given sequence of samples. 
+# ESS is a measure of the effective number of independent samples in a correlated Markov Chain Monte Carlo (MCMC) chain.
+# The function uses autocorrelations for lags up to a specified maximum (`max_lag`) to estimate how much dependence exists
+# between the samples and adjusts the total number of samples accordingly. The ESS can be used to assess the efficiency 
+# of the MCMC sampling process, with higher ESS values indicating better exploration of the parameter space.
+# 
+# Parameters:
+# - `samples`: A numeric vector of MCMC samples.
+# - `max_lag`: The maximum number of lags to consider when calculating autocorrelations (default is 100).
+# 
+# Returns:
+# - A numeric value representing the Effective Sample Size (ESS).
+calculate_ESS <- function(samples, max_lag = 100) {
+  # Calculate the autocorrelation for lags up to max_lag
+  acf_values <- acf(samples, plot = FALSE, lag.max = max_lag)$acf[-1]  # Remove lag 0
+  # Sum the autocorrelations up to the maximum lag
+  autocorr_sum <- sum(2 * acf_values)
+  # Calculate the ESS
+  n <- length(samples)
+  ESS <- n / (1 + 2 * autocorr_sum)
+  return(ESS)
+}
+
+#' invParMCMC in Parallel
+#' 
+#' @export
+invParMCMC <- function(y, x, hyperpar = c(3, 1, 1, 1, 0.00025, 0.4, 1.6, 0.2, 1.8, 0.4, 1.6, 0.2, 1.8), 
+                      mht = c(1.4, 0.8, 1, 0.3, 0.7, 0.4, 4, 2.5), PredOutOfSample = TRUE,
+                      rank = 0.95, iter = 10000, burnin = iter/2, thin = 5, ha = 2, 
+                      data = NULL, nchain = 2, percValidationSet = 20, seed = 10) {
+  # Check the number of cores
+  if (detectCores() < nchain) {
+    stop("The number of cores is less than the number of chains")
+  } else {
+    # Parallel
+    nobs <- length(y)
+    cor_all <- nchain
+    percentage_to_select <- percValidationSet
+    num_to_select <- round(nobs * (percentage_to_select / 100))
+    registerDoParallel(cores = cor_all)
+    registerDoRNG(seed = seed)
+    cat("Starting parallel MCMC with", cor_all, "chains, n =", nobs, "and p =", p, "...")
+    myres <- foreach(k = 1:cor_all) %dorng% {
+      if (PredOutOfSample) {
+        random_sample <- sample(1:nobs, num_to_select)
+        x_train <- x[-random_sample,]
+        y_train <- y[-random_sample]
+        x_val <- x[random_sample,]
+        y_val <- y[random_sample]
+      } else {
+        x_val <- NULL
+        y_val <- NULL
+      }
+      # Start the MCMC
+      if (is.null(data)) {
+        res0 <- invMCMC(y = y_train, x = x_train, y_val = y_val, x_val = x_val, 
+                        iter = iter, burnin = burnin, 
+                        mht = mht, thin = thin, ha = ha, 
+                        hyperpar = hyperpar, detail = TRUE, pb = FALSE)
+      } else {
+        res0 <- invMCMC(y = y_train, x = x_train, y_val = y_val, x_val = x_val, 
+                        iter = iter, burnin = burnin, 
+                        mht = mht, thin = thin, ha = ha, 
+                        hyperpar = hyperpar, detail = TRUE, pb = FALSE, 
+                        data = data)
+        # ritornare solo quello che ci interessa
+      }
+      return(res0)
+    } # end parallel
+    cat(" Completed!\n\n")
+    
+    # Compute the R-hat statistic
+    # LogLikelihood
+    logLikelihoodList <- lapply(myres, `[[`, "LogLikelihood")
+    meanLogLikelihood <- lapply(logLikelihoodList, function(mat) apply(mat, 2, mean))
+    logLikelihoodMatrix <- do.call(cbind, meanLogLikelihood)
+    rhatValueLogLikelihood <- gelman_rhat(logLikelihoodMatrix)
+    # Linear Predictor
+    linearPredictorList <- lapply(myres, `[[`, "linear_predictor")
+    meanLinearPredictors <- lapply(linearPredictorList, function(mat) apply(mat, 2, mean))
+    linearPredictorMatrix <- do.call(cbind, meanLinearPredictors)
+    rhatValueLinearPredictor <- gelman_rhat(linearPredictorMatrix)
+    # Model Variance
+    sigmaList <- lapply(myres, `[[`, "sigma")
+    sigmaMatrix <- do.call(cbind, sigmaList)
+    rhatValueSigma <- gelman_rhat(sigmaMatrix)
+    
+    cat("The R-hat for the mean of the log-likelihood is", rhatValueLinearPredictor, "\n")
+    cat("The R-hat for the mean of the linear predictor is", rhatValueLinearPredictor, "\n")
+    cat("The R-hat for the model variance is", rhatValueSigma, "\n")
+    
+    # Compute the ESS
+    
+  } # end check cores
+  
+  return(myres)
+}
+
+

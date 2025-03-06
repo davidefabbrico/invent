@@ -15,12 +15,12 @@
 #
 # X: original design matrix (n_obs x p)
 # X_tilde: nonlinear terms design matrix (after Scheipl's decomposition & 
-#reparameterization) (n_obs x \sum d_j)
+# reparameterization) (n_obs x \sum d_j)
 # X_l: linear term design matrix (after Scheipl's decomposition & 
-#reparameterization) (n_obs x p)
+# reparameterization) (n_obs x p)
 #
 # beta_tilde: vector that concatenates batch of coefficients for nonlinear 
-#terms (\sum d_j x 1)
+# terms (\sum d_j x 1)
 # beta_l: vector of coefficients for linear terms (p x 1)
 
 # Indices 
@@ -47,8 +47,8 @@
 #   \item betatilde - vector that concatenates batch of coefficients for nonlinear terms (d*1 x 1)
 # }
 #' @export
-
-gendata <- function(n_obs = 200, p = 10, minb = 1.5, maxb = 3.0, error = 0.01, scenario = 4, nnnc = 3, noi = 3, ha = 2){
+gendata <- function(n_obs = 200, p = 10, minb = 1.5, maxb = 3.0, error = 0.01, 
+                    scenario = 4, nnnc = 3, noi = 3, ha = 2) {
   # ha = 2, strong heredity assumption
   # ha = 1, weak heredity assumption
   # ha = 0, no assumption
@@ -247,8 +247,6 @@ gendata <- function(n_obs = 200, p = 10, minb = 1.5, maxb = 3.0, error = 0.01, s
 } # closes function genmech
 
 #' my_indicies
-#' 
-#' @export
 my_indices <- function(est, truth, mpp = T){
   if(mpp == T){
     mppi <- apply(est, 2, mean)
@@ -265,8 +263,6 @@ my_indices <- function(est, truth, mpp = T){
 }
 
 #' my_indices_int
-#' 
-#' @export
 my_indices_int <- function(est, truth, linear = TRUE, d, omega_tilde){
   p <- dim(est[,,1])[1]
   nout <- length(est)
@@ -325,7 +321,71 @@ my_indices_int <- function(est, truth, linear = TRUE, d, omega_tilde){
   return(list(matt, tpr, fpr, sel))
 }
 
-# function for create the main plot 
+######## PLOTS ###########
+# Single MPPI Plot
+#' @export
+plot_mppi <- function(df, title) {
+  # automatic step for the x-axis
+  step <- floor(dim(df)[1]*0.20)
+  selected_labels <- seq(from = 0, to = nrow(df), by = step)
+  selected_labels[1] <- 1
+  
+  mainPlot <- ggplot(df, aes(x = cov, y = mppi)) +
+    geom_segment(aes(xend = cov, yend = 0), color = 'black') +
+    labs(x = 'Covariate Index', y = 'MPPI', title = title) +
+    geom_hline(yintercept = 0.5, linetype = 'dashed', color = 'black') +
+    theme_minimal() +
+    theme(panel.grid.major = element_blank()) +
+    coord_cartesian(ylim = c(0, 1)) +
+    scale_x_discrete(
+      breaks = selected_labels,
+      labels = selected_labels
+    )
+  return(mainPlot)
+}
 
+# Plot the MPPI
+#' @export
+mppi_plot <- function(resultMCMC) {
+  # Funzione che ritorna il grafico degli MPPI. L'MCMC deve essere girato
+  # con la funzione detail = TRUE.
+  mainPlot <- NULL
+  if (is.null(resultMCMC$gamma_0_l)) {
+    stop("The MCMC should be run with detail = TRUE")
+  } else {
+    p <- ncol(resultMCMC$gamma_star_l[[1]])
+    nlp <- ncol(resultMCMC$gamma_star_nl[[1]])
+    nout <- nrow(resultMCMC$linear_predictor)
+    gammaStarLin <- array(unlist(resultMCMC$gamma_star_l), dim = c(p, p, nout))
+    gammaStarNLin <- array(unlist(resultMCMC$gamma_star_nl), dim = c(nlp, nlp, nout))
+    # gamma 0 linear
+    gamma0Lin <- resultMCMC$gamma_0_l
+    mppi_MainLinear <- apply(gamma0Lin, 2, mean)
+    # gamma 0 non linear
+    gamma0NLin <- resultMCMC$gamma_0_nl
+    mppi_MainNonLinear <- apply(gamma0NLin, 2, mean)
+    # gamma star linear (list of matrix)
+    mppi_IntLinear <- apply(gammaStarLin, c(1,2), mean)
+    # gamma star non linear
+    mppi_IntNonLinear <- apply(gammaStarNLin, c(1,2), mean)
+    # upper triangular matrix
+    mppi_IntLinear <- mppi_IntLinear[upper.tri(mppi_IntLinear)]
+    mppi_IntNonLinear <- mppi_IntNonLinear[upper.tri(mppi_IntNonLinear)]
+    mainL <- data.frame(cov = as.factor(1:length(mppi_MainLinear)), mppi = mppi_MainLinear)
+    mainNL <- data.frame(cov = as.factor(1:length(mppi_MainNonLinear)), mppi = mppi_MainNonLinear)
+    interL <- data.frame(cov = as.factor(1:length(mppi_IntLinear)), mppi = mppi_IntLinear)
+    interNL <- data.frame(cov = as.factor(1:length(mppi_IntNonLinear)), mppi = mppi_IntNonLinear)
+    # Plot
+    plot1 <- plot_mppi(mainL, 'Linear Main Effect')
+    plot2 <- plot_mppi(mainNL, 'Non-Linear Main Effect')
+    plot3 <- plot_mppi(interL, 'Linear Interaction Effect')
+    plot4 <- plot_mppi(interNL, 'Non-Linear Interaction Effect')
+    mainPlot <- grid.arrange(plot1, plot2, plot3, plot4, nrow = 2, ncol = 2)
+  }
+  return(mainPlot)
+}
+
+
+# Non-Linear Interaction Plot
 
 

@@ -26,4 +26,7 @@
 #' @import spikeSlabGAM
 #' @import stats 
 #' @import mltools
+#' @import ggplot2
+#' @import gridExtra
+#' @import doParallel
 NULL

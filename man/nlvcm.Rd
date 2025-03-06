@@ -19,8 +19,8 @@ TBA
 \seealso{
 Useful links:
 \itemize{
-  \item \url{https://github.com/mattpedone/invent}
-  \item Report bugs at \url{https://github.com/mattpedone/invent/issues}
+  \item \url{https://github.com/davidefabbrico/invent}
+  \item Report bugs at \url{https://github.com/davidefabbrico/invent/issues}
 }
 
 }

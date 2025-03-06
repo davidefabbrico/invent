@@ -1,0 +1,296 @@
+---
+title: "How to Use the INVENT Package"
+author: "Davide Fabbrico"
+date: "2025-03-05"
+output:
+    html_document:
+      toc: true
+      toc_float: true
+      toc_collapsed: true
+      toc_depth: 3
+      theme: lumen
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+## Introduction
+
+This file contains the documentation for the R package INVENT. The documentation is organized as follows:
+
+* **Chapter 1**: Shows how to install the package and provides an initial overview of its usage, including an example of using a function to generate synthetic data.
+
+* **Chapter 2**: Offers a detailed description of the input parameters for the main algorithm and the function used for generating synthetic data.
+
+* **Chapter 3**: Presents a practical application on a real dataset.
+
+## How to Install the Package and First use
+
+First, if you haven’t already installed the devtools package, you can do so using the command in line 1. Once installed, you can proceed to install the `INVENT` package directly from my GitHub repository using the command in line 2.
+
+```{r eval = FALSE}
+# install.packages("devtools")
+devtools::install_github("davidefabbrico/invent")
+```
+
+Now that the package is installed, let’s walk through a simple example. We will generate synthetic data and run the model using the invMCMC function.
+ 
+```{r eval = TRUE}
+# Load the R package
+library(invent)
+
+# Generate synthetic data
+data_list <- invent::gendata(n_obs = 200, p = 20, scenario = 4)
+
+# response vector 
+y <- data_list$Y
+# design matrix
+x <- data_list$X
+
+# Run the regression model
+out <- invent::invMCMC(y, x, iter = 10000, burnin = 5000, thin = 5, ha = 2, 
+                       data = data_list, detail = TRUE, pb = FALSE)
+```
+
+
+## `gendata` function
+
+In this section, we demonstrate how to use the `gendata` function to generate synthetic data for the various scenarios described in the manuscript. The `gendata` function requires the following input parameters:
+
+- **`n_obs`**: The number of observations.  
+
+- **`p`**: The number of covariates.  
+
+- **`minb`**: The minimum value for the coefficients.  
+
+- **`maxb`**: The maximum value for the coefficients.  
+
+- **`error`**: The standard deviation component of the model error. 
+
+- **`scenario`**: The scenario number to generate:  
+  - **Scenario 1**: Linear main effects and linear interactions.  
+  - **Scenario 2**: Linear main effects and non-linear interactions.  
+  - **Scenario 3**: Non-linear main effects and linear interactions.  
+  - **Scenario 4**: Non-linear main effects and non-linear interactions.  
+  
+- **`nnnc`**: The number of non-zero covariates.  
+
+- **`noi`**: The number of non-zero interactions for each non-zero main effect.  
+
+- **`ha`**: The heredity assumption:  
+  - `ha = 2`: **Strong heredity assumption** → An interaction effect is present only if both main effects are present.  
+  - `ha = 1`: **Weak heredity assumption** → An interaction effect is present if at least one of the main effects is present.  
+  - `ha = 0`: **No heredity assumption** → Main and interaction effects are independent.  
+  
+
+The data generating mechanism `gendata` uses the following default input parameters:
+
+```{r eval = FALSE}
+# Generate synthetic data for scenario 4
+data_list <- invent::gendata(n_obs = 200, p = 10, minb = 1.5, maxb = 3.0, error = 0.01, 
+                    scenario = 4, nnnc = 3, noi = 3, ha = 2)
+```
+
+---
+
+## `invMCMC` function
+
+### Input Parameters Description
+
+The `invMCMC` function requires several input parameters. Below is a detailed description of each parameter:
+
+- **`y`**: A vector containing the observed data (dependent variable) for the training set.
+
+- **`x`**: A matrix containing the values of the covariates for each observation in the training set.
+
+- **`y_val`**: A vector containing the observed data (dependent variable) for the validation set.
+
+- **`x_val`**: A matrix containing the values of the covariates for each observation in the validation set.
+
+- **`hyperpar`**: A vector of hyperparameters defining the prior distribution for the model parameters.
+
+- **`mht`**: A vector containing Metropolis-Hastings-related parameters for proposing new values during sampling.
+
+- **`rank`**: The percentage of data variability explained by the **P-spline**.
+
+- **`iter`**: The total number of iterations for the MCMC sampling process.
+
+- **`burnin`**: The number of initial iterations to discard during the burn-in period.
+
+- **`thin`**: The thinning interval, specifying how often to retain a sample.
+
+- **`ha`**: The heredity assumption for the model, potentially defining relationships between variables.
+
+- **`detail`**: A boolean flag indicating whether to retain all MCMC chain samples.
+
+- **`data`**: If a synthetic dataset is provided, the algorithm computes metrics for covariate selection (TPR, FPR, and MCC).
+
+- **`pb`**: A boolean flag specifying whether to display a progress bar during sampling.
+
+The algorithm uses the following default input parameters:
+
+```{r eval = FALSE}
+
+out <- invMCMC(y, x, y_val = NULL, x_val = NULL, 
+               hyperpar = c(3, 1, 1, 1, 0.00025, 0.4, 1.6, 0.2, 1.8, 0.4, 1.6, 0.2, 1.8), 
+               mht = c(1.4, 0.8, 1, 0.3, 0.7, 0.4, 4, 2.5), 
+               rank = 0.95, iter = 10000, burnin = iter/2, thin = 5, ha = 2, 
+               detail = TRUE, data = NULL, pb = FALSE) 
+  
+```
+
+The hyperparameters in `hyperpar` are organized as follows:
+
+##### Variance of coefficients \(\tau^2\)
+- `hyperpar[1]` and `hyperpar[2]`: prior distribution hyperparameters.
+
+##### Model variance \(\sigma^2\)
+- `hyperpar[3]` and `hyperpar[4]`: prior distribution hyperparameters.
+
+##### Inclusion parameter \(\gamma\)
+- `hyperpar[5]`: prior distribution hyperparameter.
+
+##### Inclusion probabilities \(\pi\)
+
+###### Main effects
+- **Linear effects**: `hyperpar[6]` and `hyperpar[7]`
+- **Non-linear effects**: `hyperpar[8]` and `hyperpar[9]`
+
+###### Interaction effects
+- **Linear effects**: `hyperpar[10]` and `hyperpar[11]`
+- **Non-linear effects**: `hyperpar[12]` and `hyperpar[13]`
+
+The hyperparameters in `mht` are organized as follows:
+
+##### Interaction coefficients
+- `mht[1]`: standard deviation for the proposal distribution of the **\(\alpha^{\ast}\)** linear interaction coefficients.
+- `mht[2]`: standard deviation for the proposal distribution of the **\(\boldsymbol{\xi}^{\ast}\)** linear interaction coefficients.
+- `mht[3]`: standard deviation for the proposal distribution of the **\(\alpha^{\ast}\)** non-linear interaction coefficients.
+- `mht[4]`: standard deviation for the proposal distribution of the **\(\boldsymbol{\xi}^{\ast}\)** non-linear interaction coefficients.
+
+##### Main effect coefficients
+- `mht[5]`: standard deviation for the proposal distribution of the **\(\theta\)** linear main effect coefficients.
+- `mht[6]`: standard deviation for the proposal distribution of the **\(\theta\)** non-linear main effect coefficients.
+- `mht[7]`: standard deviation for the proposal distribution of the **\(\boldsymbol{\xi}\)** linear main coefficients.
+- `mht[8]`: standard deviation for the proposal distribution of the **\(\boldsymbol{\xi}\)** non-linear main coefficients.
+
+
+### Output Description
+
+The function returns a structured list (`res`) containing various elements based on input conditions. The output can include posterior predictive distributions, model evaluation metrics, and selection performance measures. Below is a detailed explanation of each component.
+
+#### Common Output Elements
+
+Regardless of the input conditions, the returned list includes the following elements:
+
+- **`linear_predictor`**: The estimated values of the linear predictor \(\hat{y}\).
+- **`LogLikelihood`**: The log-likelihood of the fitted model.
+- **`execution_time`**: The total execution time of the algorithm.
+- **`acc_rate`**: The acceptance rate of the MCMC sampling process.
+- **`sigma`**: The estimated standard deviation of the error term.
+
+#### Outputs Based on Data Availability
+
+##### When No Validation Data (`y_val`) is Provided
+If the function is executed **without validation data**, the output contains:
+
+- **`mse`**: Mean Squared Error (MSE) calculated on the training dataset.
+- **`mppi_MainLinear`**: Marginal posterior probability of inclusion (MPPI) for linear main effects.
+- **`mppi_MainNonLinear`**: MPPI for non-linear main effects.
+- **`mppi_IntLinear`**: MPPI for linear interaction effects.
+- **`mppi_IntNonLinear`**: MPPI for non-linear interaction effects.
+
+##### When Validation Data (`y_val`) is Provided
+If **validation data is included**, the output extends to out-of-sample predictions:
+
+- **`y_OutSample`**: Predicted values for the validation set.
+- **`y_tComp`**: A transformation or adjustment of `y_tilde`, if applicable.
+- **`mse_inSample`**: MSE on the training set.
+- **`mse_outSample`**: MSE on the validation set.
+
+#### Outputs When Synthetic Data (`data`) is Provided
+If a synthetic dataset is provided, additional **model selection performance metrics** are included:
+
+- **`tpr`**: True Positive Rate (TPR), indicating the proportion of correctly identified relevant covariates.
+- **`fpr`**: False Positive Rate (FPR), representing the proportion of incorrectly selected covariates.
+- **`matt`**: Matthews Correlation Coefficient (MCC), a balanced measure of model selection accuracy.
+
+Each of these metrics is also computed separately for different types of effects:
+
+- **Main Effects**:
+  - `tprML`, `tprMNL`: TPR for linear and non-linear main effects.
+  - `fprML`, `fprMNL`: FPR for linear and non-linear main effects.
+  - `mattML`, `mattMNL`: MCC for linear and non-linear main effects.
+
+- **Interaction Effects**:
+  - `tprIL`, `tprINL`: TPR for linear and non-linear interaction effects.
+  - `fprIL`, `fprINL`: FPR for linear and non-linear interaction effects.
+  - `mattIL`, `mattINL`: MCC for linear and non-linear interaction effects.
+
+#### Detailed vs. Standard Output
+The function can return a **detailed output** or a **simplified version**, based on the `detail` argument:
+- **If `detail = TRUE`** → Returns the full `result` object.
+- **If `detail = FALSE`** → Returns only the relevant metrics based on the input conditions.
+
+#### Summary Table
+
+| Output Name          | Description |
+|----------------------|-------------|
+| `linear_predictor`   | Estimated values of the linear predictor. |
+| `LogLikelihood`      | Log-likelihood of the fitted model. |
+| `execution_time`     | Total execution time. |
+| `acc_rate`          | Acceptance rate of the MH sampling. |
+| `sigma`             | Estimated standard deviation of the error term. |
+| `mse_inSample`      | MSE on the training set. |
+| `mse_outSample`     | MSE on the validation set. |
+| `mppi_MainLinear`   | MPPI for linear main effects. |
+| `mppi_MainNonLinear`| MPPI for non-linear main effects. |
+| `mppi_IntLinear`    | MPPI for linear interaction effects. |
+| `mppi_IntNonLinear` | MPPI for non-linear interaction effects. |
+| `tpr`, `fpr`, `matt` | Model selection metrics (if `data` is provided). |
+
+---
+
+## Posterior Plots
+
+### MPPI Plotting Functions
+
+This section describes the functions used to generate plots for the **Marginal Posterior Probability of Inclusion (MPPI)**, which helps visualize the selection probabilities of covariates and interactions.
+
+### `mppi_plot(resultMCMC)`
+
+The `mppi_plot` function creates and returns a combined MPPI plot for different effect types.
+
+#### **Function Description**
+- Requires an **MCMC result object (`resultMCMC`)** obtained using `detail = TRUE`.
+- Extracts **linear and non-linear effects** from `resultMCMC`:
+  - **Main effects**:
+    - `mppi_MainLinear`: MPPI for linear main effects.
+    - `mppi_MainNonLinear`: MPPI for non-linear main effects.
+  - **Interaction effects**:
+    - `mppi_IntLinear`: MPPI for linear interaction effects.
+    - `mppi_IntNonLinear`: MPPI for non-linear interaction effects.
+- Converts interaction effect matrices into **upper triangular matrices** to remove redundant values.
+- Uses the `plot_mppi` function to **create four separate MPPI plots**:
+  1. **Linear Main Effects**
+  2. **Non-Linear Main Effects**
+  3. **Linear Interaction Effects**
+  4. **Non-Linear Interaction Effects**
+- Combines the four plots into a **single 2x2 grid**.
+
+#### **Input Parameters**
+- **`resultMCMC`**: A list containing MCMC results, which should include:
+  - `gamma_0_l`: Posterior samples for linear main effect selection.
+  - `gamma_0_nl`: Posterior samples for non-linear main effect selection.
+  - `gamma_star_l`: List of posterior samples for linear interaction effect selection.
+  - `gamma_star_nl`: List of posterior samples for non-linear interaction effect selection.
+
+#### **Usage**
+
+```{r eval = TRUE}
+invent::mppi_plot(out)
+```
+
+---
+
