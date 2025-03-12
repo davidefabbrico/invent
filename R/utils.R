@@ -347,12 +347,10 @@ plot_mppi <- function(df, title) {
 # Plot the MPPI
 #' @export
 mppi_plot <- function(resultMCMC) {
-  # Funzione che ritorna il grafico degli MPPI. L'MCMC deve essere girato
-  # con la funzione detail = TRUE.
+  # Function that returns the MPPI plot. The MCMC must be run with the option detail = TRUE.
   mainPlot <- NULL
-  if (is.null(resultMCMC$gamma_0_l)) {
-    stop("The MCMC should be run with detail = TRUE")
-  } else {
+  if (!is.null(resultMCMC$gamma_0_l)) {
+    # stop("The MCMC should be run with detail = TRUE")
     p <- ncol(resultMCMC$gamma_star_l[[1]])
     nlp <- ncol(resultMCMC$gamma_star_nl[[1]])
     nout <- nrow(resultMCMC$linear_predictor)
@@ -381,6 +379,19 @@ mppi_plot <- function(resultMCMC) {
     plot3 <- plot_mppi(interL, 'Linear Interaction Effect')
     plot4 <- plot_mppi(interNL, 'Non-Linear Interaction Effect')
     mainPlot <- grid.arrange(plot1, plot2, plot3, plot4, nrow = 2, ncol = 2)
+  } else if (!is.null(resultMCMC$mppi_MainLinear)) {
+    mainL <- data.frame(cov = as.factor(1:length(resultMCMC$mppi_MainLinear)), mppi = resultMCMC$mppi_MainLinear)
+    mainNL <- data.frame(cov = as.factor(1:length(resultMCMC$mppi_MainNonLinear)), mppi = resultMCMC$mppi_MainNonLinear)
+    interL <- data.frame(cov = as.factor(1:length(resultMCMC$mppi_IntLinear)), mppi = resultMCMC$mppi_IntLinear)
+    interNL <- data.frame(cov = as.factor(1:length(resultMCMC$mppi_IntNonLinear)), mppi = resultMCMC$mppi_IntNonLinear)
+    # Plot
+    plot1 <- plot_mppi(mainL, 'Linear Main Effect')
+    plot2 <- plot_mppi(mainNL, 'Non-Linear Main Effect')
+    plot3 <- plot_mppi(interL, 'Linear Interaction Effect')
+    plot4 <- plot_mppi(interNL, 'Non-Linear Interaction Effect')
+    mainPlot <- grid.arrange(plot1, plot2, plot3, plot4, nrow = 2, ncol = 2)
+  } else {
+    stop("I am unable to obtain any information about the MPPI.")
   }
   return(mainPlot)
 }

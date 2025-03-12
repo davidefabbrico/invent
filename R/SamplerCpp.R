@@ -241,7 +241,7 @@ invMCMC <- function(y, x, y_val = NULL, x_val = NULL, hyperpar = c(3, 1, 1, 1, 0
     tpr <- contTable[2,2]/sum(contTable[,2]) 
     fpr <- contTable[2,1]/sum(contTable[,1]) 
   }
-  # exexution time
+  # execution time
   execution_time <- result$Execution_Time
   # acceptance ratio 
   acc_rate <- result$acc_rate
@@ -260,12 +260,12 @@ invMCMC <- function(y, x, y_val = NULL, x_val = NULL, hyperpar = c(3, 1, 1, 1, 0
         res <- list(linear_predictor = yhat, y_OutSample = y_tilde, LogLikelihood = ll, y_tComp = y_tComplete,
                     mse_inSample = mse_is, mse_outSample = mse_os, mppi_MainLinear = mppi_MainLinear, 
                     mppi_MainNonLinear = mppi_MainNonLinear, mppi_IntLinear = mppi_IntLinear, 
-                    mppi_IntNonLinear = mppi_IntNonLinear, execution_time = execution_time, acc_rate = acc_rate, sigma = sigma)
+                    mppi_IntNonLinear = mppi_IntNonLinear, Execution_Time = execution_time, acc_rate = acc_rate, sigma = sigma)
       } else {
         res <- list(linear_predictor = yhat, LogLikelihood = ll, 
                     mse = mse_is, mppi_MainLinear = mppi_MainLinear, 
                     mppi_MainNonLinear = mppi_MainNonLinear, mppi_IntLinear = mppi_IntLinear, 
-                    mppi_IntNonLinear = mppi_IntNonLinear, execution_time = execution_time, acc_rate = acc_rate, sigma = sigma)
+                    mppi_IntNonLinear = mppi_IntNonLinear, Execution_Time = execution_time, acc_rate = acc_rate, sigma = sigma)
       }
     } else {
       if (!is.null(y_val)) {
@@ -275,17 +275,16 @@ invMCMC <- function(y, x, y_val = NULL, x_val = NULL, hyperpar = c(3, 1, 1, 1, 0
                     mse_outSample = mse_os, tpr = tpr, tprML = tpr_MainLinear, tprMNL = tpr_MainNonLinear, tprIL = tpr_IntLinear, tprINL = tpr_IntNonLinear, fpr = fpr,
                     fprML = fpr_MainLinear, fprMNL = fpr_MainNonLinear, fprIL = fpr_IntLinear, fprINL = fpr_IntNonLinear,
                     matt = matt, mattML = matt_MainLinear, mattMNL = matt_MainNonLinear, mattIL = matt_IntLinear, mattINL = matt_IntNonLinear,
-                    execution_time = execution_time, acc_rate = acc_rate, sigma = sigma)
+                    Execution_Time = execution_time, acc_rate = acc_rate, sigma = sigma)
       } else {
         # return tpr, fpr, matt
         res <- list(linear_predictor = yhat, 
                     LogLikelihood = ll, mse = mse_is, tpr = tpr, tprML = tpr_MainLinear, tprMNL = tpr_MainNonLinear, tprIL = tpr_IntLinear, tprINL = tpr_IntNonLinear, fpr = fpr,
                     fprML = fpr_MainLinear, fprMNL = fpr_MainNonLinear, fprIL = fpr_IntLinear, fprINL = fpr_IntNonLinear,
-                    matt = matt, mattML = matt_MainLinear, mattMNL = matt_MainNonLinear, mattIL = matt_IntLinear, mattINL = matt_IntNonLinear, execution_time = execution_time, acc_rate = acc_rate, sigma = sigma)
+                    matt = matt, mattML = matt_MainLinear, mattMNL = matt_MainNonLinear, mattIL = matt_IntLinear, mattINL = matt_IntNonLinear, Execution_Time = execution_time, acc_rate = acc_rate, sigma = sigma)
       }
     }
   }
-  
   return(res)
 }
 
@@ -390,23 +389,70 @@ invParMCMC <- function(y, x, hyperpar = c(3, 1, 1, 1, 0.00025, 0.4, 1.6, 0.2, 1.
     cat(" Completed!\n\n")
     
     # Compute the R-hat statistic
-    # LogLikelihood
-    logLikelihoodList <- lapply(myres, `[[`, "LogLikelihood")
-    meanLogLikelihood <- lapply(logLikelihoodList, function(mat) apply(mat, 2, mean))
-    logLikelihoodMatrix <- do.call(cbind, meanLogLikelihood)
-    rhatValueLogLikelihood <- gelman_rhat(logLikelihoodMatrix)
-    # Linear Predictor
-    linearPredictorList <- lapply(myres, `[[`, "linear_predictor")
-    meanLinearPredictors <- lapply(linearPredictorList, function(mat) apply(mat, 2, mean))
-    linearPredictorMatrix <- do.call(cbind, meanLinearPredictors)
-    rhatValueLinearPredictor <- gelman_rhat(linearPredictorMatrix)
+
+    # xi star linear
+    # xi star non linear
+    # m star linear
+    # m star non linear
+    # alpha star linear -
+    # alpha star non linear -
+    # xi linear
+    # xi non linear
+    # m linear
+    # m non linear
+    # theta linear - 
+    # theta non linear - 
+    # intercept -
+    # sigma -
+    
+    # Theta Linear
+    p <- ncol(x)
+    thetaLinearList <- lapply(myres, `[[`, "alpha_0_l")
+    for (cov in 1:p) {
+      thetaLinearMatrix <- sapply(thetaLinearList, function(mat) mat[, cov])
+      rhatValueThetaLinear <- gelman_rhat(thetaLinearMatrix)
+      cat("The R-hat for the linear main effect", cov, "is", rhatValueThetaLinear, "\n")
+    }
+    # Theta Non Linear
+    thetaNonLinearList <- lapply(myres, `[[`, "alpha_0_nl")
+    for (cov in 1:p) {
+      thetaNonLinearMatrix <- sapply(thetaNonLinearList, function(mat) mat[, cov])
+      rhatValueThetaNonLinear <- gelman_rhat(thetaNonLinearMatrix)
+      cat("The R-hat for the non-linear main effect", cov, "is", 
+          rhatValueThetaNonLinear, "\n")
+    }
+    # Alpha Star Linear
+    alphaStarLinearList <- lapply(myres, `[[`, "alpha_star_l")
+    for (j in 1:(p-1)) {
+      for (k in (j+1):p) {
+        alphaStarLinearMatrix <- sapply(alphaStarLinearList, 
+                                        function(lst) sapply(lst, function(mat) mat[j, k]))
+        rhatValueAlphaStarLinear <- gelman_rhat(alphaStarLinearMatrix)
+        cat("The R-hat for the linear interaction effect between", j, "and", k, "is", 
+            rhatValueAlphaStarLinear, "\n")
+      }
+    }
+    # Alpha Star Non Linear
+    alphaStarNonLinearList <- lapply(myres, `[[`, "alpha_star_nl")
+    for (j in 1:(p-1)) {
+      for (k in (j+1):p) {
+        alphaStarNonLinearMatrix <- sapply(alphaStarNonLinearList, 
+                                        function(lst) sapply(lst, function(mat) mat[j, k]))
+        rhatValueAlphaStarNonLinear <- gelman_rhat(alphaStarNonLinearMatrix)
+        cat("The R-hat for the non linear interaction effect between", j, "and", k, "is", 
+            rhatValueAlphaStarNonLinear, "\n")
+      }
+    }
+    # Intercept
+    interceptList <- lapply(myres, `[[`, "intercept")
+    interceptMatrix <- do.call(cbind, interceptList)
+    rhatValueIntercept <- gelman_rhat(interceptMatrix)
     # Model Variance
     sigmaList <- lapply(myres, `[[`, "sigma")
     sigmaMatrix <- do.call(cbind, sigmaList)
     rhatValueSigma <- gelman_rhat(sigmaMatrix)
-    
-    cat("The R-hat for the mean of the log-likelihood is", rhatValueLinearPredictor, "\n")
-    cat("The R-hat for the mean of the linear predictor is", rhatValueLinearPredictor, "\n")
+
+    cat("The R-hat for the intercept is", rhatValueIntercept, "\n")
     cat("The R-hat for the model variance is", rhatValueSigma, "\n")
     
     # Compute the ESS
@@ -415,5 +461,15 @@ invParMCMC <- function(y, x, hyperpar = c(3, 1, 1, 1, 0.00025, 0.4, 1.6, 0.2, 1.
   
   return(myres)
 }
+
+
+# my_model <- function(formula, data) {
+#   X <- model.matrix(formula, data)
+#   y <- model.response(model.frame(formula, data))
+# }
+
+
+
+
 
 

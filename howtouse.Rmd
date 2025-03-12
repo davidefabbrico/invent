@@ -40,8 +40,11 @@ Now that the package is installed, let’s walk through a simple example. We wil
 # Load the R package
 library(invent)
 
+# Set Seed
+set.seed(10)
+
 # Generate synthetic data
-data_list <- invent::gendata(n_obs = 200, p = 20, scenario = 4)
+data_list <- invent::gendata(n_obs = 400, p = 10, scenario = 4)
 
 # response vector 
 y <- data_list$Y
@@ -289,8 +292,10 @@ The `mppi_plot` function creates and returns a combined MPPI plot for different 
 #### **Usage**
 
 ```{r eval = TRUE}
-invent::mppi_plot(out)
+mppi_res <- invent::mppi_plot(out)
 ```
 
 ---
+
+## Parallel Computing
 
