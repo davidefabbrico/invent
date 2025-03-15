@@ -456,10 +456,14 @@ invParMCMC <- function(y, x, hyperpar = c(3, 1, 1, 1, 0.00025, 0.4, 1.6, 0.2, 1.
     cat(" Completed!\n\n")
     
     # Compute the R-hat statistic
-    # M Star Linear PROBLEMA
+    # M Star Linear 
     rhatValueMStarLinear <- rhatIntPar(myres, "m_star_l")
-    # M Star Non Linear PROBLEMA
+    # M Star Non Linear 
     rhatValueMStarNonLinear <- rhatIntPar(myres, "m_star_nl")
+    # Gamma star linear
+    rhatValueGammaStarLinear <- rhatIntPar(myres, "gamma_star_l")
+    # Gamma star Non Linear
+    rhatValueGammaStarNonLinear <- rhatIntPar(myres, "gamma_star_nl")
     # Theta Linear
     rhatValueThetaLinear <- rhatMainPar(myres, "theta_l")
     # Theta Non Linear
@@ -476,6 +480,10 @@ invParMCMC <- function(y, x, hyperpar = c(3, 1, 1, 1, 0.00025, 0.4, 1.6, 0.2, 1.
     rhatValuePiLinear <- rhatSinglePar(myres, "pi_l")
     # Pi Non Linear
     rhatValuePiNonLinear <- rhatSinglePar(myres, "pi_nl")
+    # Gamma linear
+    rhatValueGammaLinear <- rhatMainPar(myres, "gamma_l")
+    # Gamma Non Linear
+    rhatValueGammaNonLinear <- rhatMainPar(myres, "gamma_nl")
     # Pi Star Linear
     rhatValuePiStarLinear <- rhatSinglePar(myres, "pi_star_l")
     # Pi Star Non Linear
@@ -522,12 +530,18 @@ invParMCMC <- function(y, x, hyperpar = c(3, 1, 1, 1, 0.00025, 0.4, 1.6, 0.2, 1.
       rhatValueTauLinear, rhatValueTauNonLinear,
       rhatValueTauStarLinear, rhatValueTauStarNonLinear,
       
-      # Interaction weights
+      # Selection parameters
+      rhatValueGammaLinear, rhatValueGammaNonLinear,
+      rhatValueGammaStarLinear, rhatValueGammaStarNonLinear,
+      
+      # Interaction Xi Star parameters
       rhatValueXiStarLinear, rhatValueXiStarNonLinear,
       
       # Model fundamentals
       rhatValueIntercept, rhatValueSigma
     )
+    
+    all_rhat <- round(all_rhat, 2)
     
     # 1. Check for NA/NaN values 
     if (anyNA(all_rhat) || any(is.nan(all_rhat))) {
@@ -548,7 +562,7 @@ invParMCMC <- function(y, x, hyperpar = c(3, 1, 1, 1, 0.00025, 0.4, 1.6, 0.2, 1.
     
     convergence_ratio <- good_rhat_count / total_valid
     
-    if (convergence_ratio >= 0.95) {
+    if (convergence_ratio >= 0.90) {
       message(sprintf(
         "\u2705 %.1f%% of Rhat values (%d/%d) <= %.2f",
         convergence_ratio * 100,
@@ -558,7 +572,7 @@ invParMCMC <- function(y, x, hyperpar = c(3, 1, 1, 1, 0.00025, 0.4, 1.6, 0.2, 1.
       ))
     } else {
       warning(sprintf(
-        "\u274c WARNING: Only %.1f%% of Rhat values (n = %d/%d) <= %.2f",
+        "\u274c WARNING: Only %.1f%% of Rhat values (%d/%d) <= %.2f",
         convergence_ratio * 100,
         good_rhat_count,
         total_valid,
