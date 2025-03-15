@@ -14,12 +14,12 @@
 # alpha0: intercept
 #
 # X: original design matrix (n_obs x p)
-# X_tilde: nonlinear terms design matrix (after Scheipl's decomposition & 
+# X_nl: nonlinear terms design matrix (after Scheipl's decomposition & 
 # reparameterization) (n_obs x \sum d_j)
 # X_l: linear term design matrix (after Scheipl's decomposition & 
 # reparameterization) (n_obs x p)
 #
-# beta_tilde: vector that concatenates batch of coefficients for nonlinear 
+# beta_nl: vector that concatenates batch of coefficients for nonlinear 
 # terms (\sum d_j x 1)
 # beta_l: vector of coefficients for linear terms (p x 1)
 
@@ -44,7 +44,7 @@
 #   \item d - vector of number of basis used to represent each covariate (p x 1)
 #   \item intcp - scalat, value of the offset
 #   \item betal - vector of coefficients for linear terms (p x 1)
-#   \item betatilde - vector that concatenates batch of coefficients for nonlinear terms (d*1 x 1)
+#   \item betanl - vector that concatenates batch of coefficients for nonlinear terms (d*1 x 1)
 # }
 #' @export
 gendata <- function(n_obs = 200, p = 10, minb = 1.5, maxb = 3.0, error = 0.01, 
@@ -58,7 +58,7 @@ gendata <- function(n_obs = 200, p = 10, minb = 1.5, maxb = 3.0, error = 0.01,
   
   X <- vector()
   X_l <- vector()
-  X_tilde <- vector()
+  X_nl <- vector()
   d <- vector()
   
   for(j in 1:p) {
@@ -67,7 +67,7 @@ gendata <- function(n_obs = 200, p = 10, minb = 1.5, maxb = 3.0, error = 0.01,
     xjl <- lin(xj)
     X_l <- cbind(X_l, xjl)
     xjtilde <- sm(x = xj, rankZ = .95) 
-    X_tilde <- cbind(X_tilde, xjtilde)
+    X_nl <- cbind(X_nl, xjtilde)
     d[j] <- dim(xjtilde)[2]
   }
   cd <- c(0, cumsum(d))
@@ -83,21 +83,21 @@ gendata <- function(n_obs = 200, p = 10, minb = 1.5, maxb = 3.0, error = 0.01,
   # Non-linear main effect and non-linear interaction effect
   
   # alpha_0 main effect (linear)
-  alpha_0_l <- matrix(0, nrow = n_obs, ncol = p)
+  theta_l <- matrix(0, nrow = n_obs, ncol = p)
   # nnnc <- round(p*sp) # number of non null covariates (linear terms) (IMPORTANTE)
   innc <- sort(sample(1:p, nnnc, replace = FALSE)) # position of non null covariates (linear terms)
   for (j in innc) {
-    alpha_0_l[,j] <- runif(1, minb, maxb) * sign(runif(1, -1, 1))
+    theta_l[,j] <- runif(1, minb, maxb) * sign(runif(1, -1, 1))
   }
   
   # alpha_0 main effect (non linear)
-  alpha_0_tilde <- matrix(0, nrow = n_obs, ncol = p)
+  theta_nl <- matrix(0, nrow = n_obs, ncol = p)
   if ((scenario == 3) | (scenario == 4)) {
     innc_nl <- innc # indices for non null covariates (non linear terms)
     for (j in innc) {
-      alpha_0_tilde[,j] <- runif(1, minb, maxb)*sign(runif(1, -1, 1))
-      if (sign(alpha_0_l[1,j]) != sign(alpha_0_tilde[1,j])) {
-        alpha_0_tilde[,j] <- alpha_0_tilde[,j]*(-1)
+      theta_nl[,j] <- runif(1, minb, maxb)*sign(runif(1, -1, 1))
+      if (sign(theta_l[1,j]) != sign(theta_nl[1,j])) {
+        theta_nl[,j] <- theta_nl[,j]*(-1)
       }
     }
   }
@@ -109,15 +109,15 @@ gendata <- function(n_obs = 200, p = 10, minb = 1.5, maxb = 3.0, error = 0.01,
     if (ha == 2) { # strong heredity
       for (i in 1:(p-1)) {
         for (j in (i+1):p) {
-          if ((alpha_0_l[1,i] != 0) & (alpha_0_l[1,j] != 0)) {
-            omega_l[i,j] <- alpha_0_l[1,i]*alpha_0_l[1,j]
+          if ((theta_l[1,i] != 0) & (theta_l[1,j] != 0)) {
+            omega_l[i,j] <- theta_l[1,i]*theta_l[1,j]
           }
         }
       }
     }
   }
   
-  omega_tilde <- matrix(0, nrow = p, ncol = q)
+  omega_nl <- matrix(0, nrow = p, ncol = q)
   if (ha == 1) { # weak heredity
     lastInt <- setdiff(p_vector, innc)
     for (i in innc) {
@@ -130,7 +130,7 @@ gendata <- function(n_obs = 200, p = 10, minb = 1.5, maxb = 3.0, error = 0.01,
       vectorInter <- sort(c(i,nn_int))
       omega_l[vectorInter[1],vectorInter[2]] <- rnorm(1, 2, 0.5)*sign(runif(1, -1, 1))
       if (scenario == 2 || scenario == 4) {
-        omega_tilde[vectorInter[1], (cd[vectorInter[2]]+1):(cd[vectorInter[2]+1])] <- rnorm(1, 2, 0.5)*sign(runif(1, -1, 1))
+        omega_nl[vectorInter[1], (cd[vectorInter[2]]+1):(cd[vectorInter[2]+1])] <- rnorm(1, 2, 0.5)*sign(runif(1, -1, 1))
       }
     }
   }
@@ -147,7 +147,7 @@ gendata <- function(n_obs = 200, p = 10, minb = 1.5, maxb = 3.0, error = 0.01,
       second <- vectorInter[2]
       omega_l[first, second] <- rnorm(1, 2, 0.5)*sign(runif(1, -1, 1))
       if (scenario == 2 || scenario == 4) {
-        omega_tilde[first, (cd[second]+1):(cd[second+1])] <- rnorm(1, 2, 0.5)*sign(runif(1, -1, 1))
+        omega_nl[first, (cd[second]+1):(cd[second+1])] <- rnorm(1, 2, 0.5)*sign(runif(1, -1, 1))
       }
     }
   }
@@ -156,8 +156,8 @@ gendata <- function(n_obs = 200, p = 10, minb = 1.5, maxb = 3.0, error = 0.01,
   #   if (ha == 2) {
   #     for (i in 1:(p-1)) {
   #       for (j in (i+1):p) {
-  #         if ((alpha_0_tilde[1,i] != 0) & (alpha_0_tilde[1,j] != 0)) {
-  #           omega_tilde[i, (cd[j]+1):(cd[j+1])] <- alpha_0_tilde[1,i]*alpha_0_tilde[1,j]
+  #         if ((theta_nl[1,i] != 0) & (theta_nl[1,j] != 0)) {
+  #           omega_nl[i, (cd[j]+1):(cd[j+1])] <- theta_nl[1,i]*theta_nl[1,j]
   #         }
   #       }
   #     }
@@ -168,8 +168,8 @@ gendata <- function(n_obs = 200, p = 10, minb = 1.5, maxb = 3.0, error = 0.01,
     if (scenario == 2 || scenario == 4) {
       for (i in 1:(p-1)) {
         for (j in (i+1):p) {
-          if ((alpha_0_l[1,i] != 0) & (alpha_0_l[1,j] != 0)) {
-            omega_tilde[i, (cd[j]+1):(cd[j+1])] <- rnorm(1, 2, 0.5)*sign(runif(1, -1, 1))
+          if ((theta_l[1,i] != 0) & (theta_l[1,j] != 0)) {
+            omega_nl[i, (cd[j]+1):(cd[j+1])] <- rnorm(1, 2, 0.5)*sign(runif(1, -1, 1))
           }
         }
       }
@@ -180,7 +180,7 @@ gendata <- function(n_obs = 200, p = 10, minb = 1.5, maxb = 3.0, error = 0.01,
   alpha_l <- matrix(0, nrow = n_obs, ncol = p)
   # compute alpha
   for (j in 1:p) {
-    alpha_l[,j] <- alpha_0_l[,j]
+    alpha_l[,j] <- theta_l[,j]
     if (j != p) {
       for (k in (j+1):p) {
         alpha_l[,j] <- alpha_l[,j] + matrix(X_l[,k])*omega_l[j,k]
@@ -188,12 +188,12 @@ gendata <- function(n_obs = 200, p = 10, minb = 1.5, maxb = 3.0, error = 0.01,
     }
   }
   
-  alpha_tilde <- matrix(0, nrow = n_obs, ncol = p)
+  alpha_nl <- matrix(0, nrow = n_obs, ncol = p)
   for (j in 1:p) {
-    alpha_tilde[,j] <- alpha_0_tilde[,j]
+    alpha_nl[,j] <- theta_nl[,j]
     if (j != p) {
       for (k in (j+1):p) {
-        alpha_tilde[,j] <- alpha_tilde[,j] + X_tilde[,(cd[k]+1):(cd[k+1])]%*%omega_tilde[j, (cd[k]+1):(cd[k+1])]
+        alpha_nl[,j] <- alpha_nl[,j] + X_nl[,(cd[k]+1):(cd[k+1])]%*%omega_nl[j, (cd[k]+1):(cd[k+1])]
       }
     }
   }
@@ -211,10 +211,10 @@ gendata <- function(n_obs = 200, p = 10, minb = 1.5, maxb = 3.0, error = 0.01,
     beta_l[,j] <- alpha_l[,j] * xi_l[j]
   }
   
-  beta_tilde <- matrix(0, nrow = n_obs, ncol = q)
+  beta_nl <- matrix(0, nrow = n_obs, ncol = q)
   for (j in 1:p) {
     for(i in 1:n_obs) {
-      beta_tilde[i,(cd[j]+1):(cd[j+1])] <- alpha_tilde[i,j]*xi_tilde[(cd[j]+1):(cd[j+1])]
+      beta_nl[i,(cd[j]+1):(cd[j+1])] <- alpha_nl[i,j]*xi_tilde[(cd[j]+1):(cd[j+1])]
     }
   }
   
@@ -224,7 +224,7 @@ gendata <- function(n_obs = 200, p = 10, minb = 1.5, maxb = 3.0, error = 0.01,
   Y <- rep(0, n_obs)
   for (i in 1:n_obs) {
     for (j in 1:p) {
-      Y[i] <- Y[i] + X_l[i,j]*beta_l[i,j] + X_tilde[i,(cd[j]+1):(cd[j+1])]%*%beta_tilde[i,(cd[j]+1):(cd[j+1])]
+      Y[i] <- Y[i] + X_l[i,j]*beta_l[i,j] + X_nl[i,(cd[j]+1):(cd[j+1])]%*%beta_nl[i,(cd[j]+1):(cd[j+1])]
     }
     Y[i] <- eta0[i] + Y[i] + epsilon[i]
   }
@@ -232,18 +232,18 @@ gendata <- function(n_obs = 200, p = 10, minb = 1.5, maxb = 3.0, error = 0.01,
   return(list(
     Y = Y,
     X = X, 
-    Xl = X_l, 
-    Xnl = X_tilde, 
+    X_l = X_l, 
+    X_nl = X_nl, 
     d = d, 
     intcpt = eta0[1],
-    betal = beta_l, 
-    betatilde = beta_tilde,
-    alpha_0_l = alpha_0_l,
-    alpha_0_tilde = alpha_0_tilde,
+    beta_l = beta_l, 
+    beta_nl = beta_nl,
+    theta_l = theta_l,
+    theta_nl = theta_nl,
     alpha_l = alpha_l,
-    alpha_tilde = alpha_tilde,
+    alpha_nl = alpha_nl,
     omega_l = omega_l,
-    omega_tilde = omega_tilde))
+    omega_nl = omega_nl))
 } # closes function genmech
 
 #' my_indicies
@@ -263,7 +263,7 @@ my_indices <- function(est, truth, mpp = T){
 }
 
 #' my_indices_int
-my_indices_int <- function(est, truth, linear = TRUE, d, omega_tilde){
+my_indices_int <- function(est, truth, linear = TRUE, d, omega_nl){
   p <- dim(est[,,1])[1]
   nout <- length(est)
   if (linear) {
@@ -280,7 +280,7 @@ my_indices_int <- function(est, truth, linear = TRUE, d, omega_tilde){
     mppi <- apply(est, c(1,2), mean)
     sel <- mppi > 0.5
     sel[sel == TRUE] = 1
-    TData <- omega_tilde
+    TData <- omega_nl
     true <- matrix(0, nrow = p, ncol = p)
     for (i in 1:(p-1)) {
       for (j in (i+1):p) {
@@ -341,7 +341,6 @@ plot_mppi <- function(df, title) {
       breaks = selected_labels,
       labels = selected_labels
     )
-  return(mainPlot)
 }
 
 # Plot the MPPI
@@ -349,25 +348,26 @@ plot_mppi <- function(df, title) {
 mppi_plot <- function(resultMCMC) {
   # Function that returns the MPPI plot. The MCMC must be run with the option detail = TRUE.
   mainPlot <- NULL
-  if (!is.null(resultMCMC$gamma_0_l)) {
+  if (!is.null(resultMCMC$gamma_l)) {
     # stop("The MCMC should be run with detail = TRUE")
     p <- ncol(resultMCMC$gamma_star_l[[1]])
     nlp <- ncol(resultMCMC$gamma_star_nl[[1]])
     nout <- nrow(resultMCMC$linear_predictor)
     gammaStarLin <- array(unlist(resultMCMC$gamma_star_l), dim = c(p, p, nout))
     gammaStarNLin <- array(unlist(resultMCMC$gamma_star_nl), dim = c(nlp, nlp, nout))
-    # gamma 0 linear
-    gamma0Lin <- resultMCMC$gamma_0_l
-    mppi_MainLinear <- apply(gamma0Lin, 2, mean)
-    # gamma 0 non linear
-    gamma0NLin <- resultMCMC$gamma_0_nl
-    mppi_MainNonLinear <- apply(gamma0NLin, 2, mean)
+    # gamma main linear
+    gammaLin <- resultMCMC$gamma_l
+    mppi_MainLinear <- apply(gammaLin, 2, mean)
+    # gamma main non linear
+    gammaNLin <- resultMCMC$gamma_nl
+    mppi_MainNonLinear <- apply(gammaNLin, 2, mean)
     # gamma star linear (list of matrix)
     mppi_IntLinear <- apply(gammaStarLin, c(1,2), mean)
     # gamma star non linear
     mppi_IntNonLinear <- apply(gammaStarNLin, c(1,2), mean)
     # upper triangular matrix
     mppi_IntLinear <- mppi_IntLinear[upper.tri(mppi_IntLinear)]
+    mppi_IntLinear <- mppi_IntLinear[mppi_IntLinear != 0]
     mppi_IntNonLinear <- mppi_IntNonLinear[upper.tri(mppi_IntNonLinear)]
     mainL <- data.frame(cov = as.factor(1:length(mppi_MainLinear)), mppi = mppi_MainLinear)
     mainNL <- data.frame(cov = as.factor(1:length(mppi_MainNonLinear)), mppi = mppi_MainNonLinear)
@@ -380,10 +380,18 @@ mppi_plot <- function(resultMCMC) {
     plot4 <- plot_mppi(interNL, 'Non-Linear Interaction Effect')
     mainPlot <- grid.arrange(plot1, plot2, plot3, plot4, nrow = 2, ncol = 2)
   } else if (!is.null(resultMCMC$mppi_MainLinear)) {
+    # Linear Interaction effects
+    mppi_IntLinear <- resultMCMC$mppi_IntLinear
+    mppi_IntLinear <- mppi_IntLinear[upper.tri(mppi_IntLinear)]
+    # check null interaction 
+    cNullInt <- mppi_IntLinear[mppi_IntLinear != 0]
+    # NonLinear Interaction effects
+    mppi_IntNonLinear <- resultMCMC$mppi_IntNonLinear
+    mppi_IntNonLinear <- mppi_IntNonLinear[upper.tri(mppi_IntNonLinear)]
     mainL <- data.frame(cov = as.factor(1:length(resultMCMC$mppi_MainLinear)), mppi = resultMCMC$mppi_MainLinear)
     mainNL <- data.frame(cov = as.factor(1:length(resultMCMC$mppi_MainNonLinear)), mppi = resultMCMC$mppi_MainNonLinear)
-    interL <- data.frame(cov = as.factor(1:length(resultMCMC$mppi_IntLinear)), mppi = resultMCMC$mppi_IntLinear)
-    interNL <- data.frame(cov = as.factor(1:length(resultMCMC$mppi_IntNonLinear)), mppi = resultMCMC$mppi_IntNonLinear)
+    interL <- data.frame(cov = as.factor(1:length(cNullInt)), mppi = cNullInt)
+    interNL <- data.frame(cov = as.factor(1:length(mppi_IntNonLinear)), mppi = mppi_IntNonLinear)
     # Plot
     plot1 <- plot_mppi(mainL, 'Linear Main Effect')
     plot2 <- plot_mppi(mainNL, 'Non-Linear Main Effect')
@@ -393,7 +401,6 @@ mppi_plot <- function(resultMCMC) {
   } else {
     stop("I am unable to obtain any information about the MPPI.")
   }
-  return(mainPlot)
 }
 
 

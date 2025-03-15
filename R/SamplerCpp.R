@@ -63,7 +63,7 @@ invMCMC <- function(y, x, y_val = NULL, x_val = NULL, hyperpar = c(3, 1, 1, 1, 0
                     detail = FALSE, data = NULL, pb = TRUE) {
   
   result <- NULL
-  #useful quantities
+  # useful quantities
   nobs <- dim(x)[1] # number of observations
   p <- dim(x)[2] # number of covariates
   n_cat <- 0
@@ -134,12 +134,12 @@ invMCMC <- function(y, x, y_val = NULL, x_val = NULL, hyperpar = c(3, 1, 1, 1, 0
     # Compute the main metrics
     gammaStarLin <- array(unlist(result$gamma_star_l), dim = c(p, p, nout))
     gammaStarNLin <- array(unlist(result$gamma_star_nl), dim = c(nlp, nlp, nout))
-    # gamma 0 linear
-    gamma0Lin <- result$gamma_0_l
-    mppi_MainLinear <- apply(gamma0Lin, 2, mean)
-    # gamma 0 non linear
-    gamma0NLin <- result$gamma_0_nl
-    mppi_MainNonLinear <- apply(gamma0NLin, 2, mean)
+    # gamma main linear
+    gammaLin <- result$gamma_l
+    mppi_MainLinear <- apply(gammaLin, 2, mean)
+    # gamma main non linear
+    gammaNLin <- result$gamma_nl
+    mppi_MainNonLinear <- apply(gammaNLin, 2, mean)
     # gamma star linear (list of matrix)
     mppi_IntLinear <- apply(gammaStarLin, c(1,2), mean)
     # gamma star non linear
@@ -150,8 +150,8 @@ invMCMC <- function(y, x, y_val = NULL, x_val = NULL, hyperpar = c(3, 1, 1, 1, 0
   } else {
     mppi_IntLinear <- result$gamma_star_l
     mppi_IntNonLinear <- result$gamma_star_nl
-    mppi_MainLinear <- result$gamma_0_l
-    mppi_MainNonLinear <- result$gamma_0_nl
+    mppi_MainLinear <- result$gamma_l
+    mppi_MainNonLinear <- result$gamma_nl
     yhat <- result$linear_predictor
   }
   # mean square error
@@ -177,7 +177,7 @@ invMCMC <- function(y, x, y_val = NULL, x_val = NULL, hyperpar = c(3, 1, 1, 1, 0
     # selected by the model
     sel_MainLinear <- as.numeric(mppi_MainLinear > 0.5)
     # true non null effect
-    true_MainLinear <- as.numeric(data$alpha_0_l[1,] != 0)
+    true_MainLinear <- as.numeric(data$theta_l[1,] != 0)
     # table linear main effect
     tab_MainLinear <- my_cm(sel_MainLinear, true_MainLinear)
     matt_MainLinear <- mcc(confusionM = tab_MainLinear)
@@ -187,7 +187,7 @@ invMCMC <- function(y, x, y_val = NULL, x_val = NULL, hyperpar = c(3, 1, 1, 1, 0
     # selected by the model
     sel_MainNonLinear <- as.numeric(mppi_MainNonLinear > 0.5)
     # true non null effect
-    true_MainNonLinear <- as.numeric(data$alpha_0_tilde[1,] != 0)
+    true_MainNonLinear <- as.numeric(data$theta_nl[1,] != 0)
     # table linear main effect
     tab_MainNonLinear <- my_cm(sel_MainNonLinear, true_MainNonLinear)
     matt_MainNonLinear <- mcc(confusionM = tab_MainNonLinear)
@@ -215,7 +215,7 @@ invMCMC <- function(y, x, y_val = NULL, x_val = NULL, hyperpar = c(3, 1, 1, 1, 0
     ############### Non linear Interaction effect ###################
     sel_IntNonLinear <- mppi_IntNonLinear > 0.5
     sel_IntNonLinear[sel_IntNonLinear == TRUE] = 1
-    TData <- data$omega_tilde
+    TData <- data$omega_nl
     true_IntNonLinear <- matrix(0, nrow = p, ncol = p)
     for (i in 1:(p-1)) {
       for (j in (i+1):p) {
@@ -257,7 +257,7 @@ invMCMC <- function(y, x, y_val = NULL, x_val = NULL, hyperpar = c(3, 1, 1, 1, 0
       # if there is no data generating mechanism
       if (!is.null(y_val)) {
         # if there is the posterior predictive distribution
-        res <- list(linear_predictor = yhat, y_OutSample = y_tilde, LogLikelihood = ll, y_tComp = y_tComplete,
+        res <- list(linear_predictor = yhat, y_OutSample = y_tilde, LogLikelihood = ll, y_tildeChain = y_tComplete,
                     mse_inSample = mse_is, mse_outSample = mse_os, mppi_MainLinear = mppi_MainLinear, 
                     mppi_MainNonLinear = mppi_MainNonLinear, mppi_IntLinear = mppi_IntLinear, 
                     mppi_IntNonLinear = mppi_IntNonLinear, Execution_Time = execution_time, acc_rate = acc_rate, sigma = sigma)
@@ -270,7 +270,7 @@ invMCMC <- function(y, x, y_val = NULL, x_val = NULL, hyperpar = c(3, 1, 1, 1, 0
     } else {
       if (!is.null(y_val)) {
         # return tpr, fpr, matt
-        res <- list(linear_predictor = yhat, y_OutSample = y_tilde, y_tComp = y_tComplete,
+        res <- list(linear_predictor = yhat, y_OutSample = y_tilde, y_tildeChain = y_tComplete,
                     LogLikelihood = ll, mse_inSample = mse_is, 
                     mse_outSample = mse_os, tpr = tpr, tprML = tpr_MainLinear, tprMNL = tpr_MainNonLinear, tprIL = tpr_IntLinear, tprINL = tpr_IntNonLinear, fpr = fpr,
                     fprML = fpr_MainLinear, fprMNL = fpr_MainNonLinear, fprIL = fpr_IntLinear, fprINL = fpr_IntNonLinear,
@@ -315,6 +315,73 @@ gelman_rhat <- function(chains) {
   # Compute the R-hat statistic
   R_hat <- sqrt(var_hat / W)
   return(R_hat)
+}
+
+rhatSinglePar <- function(myres, stringName = "") {
+  if (stringName == "") {
+    stop("Please provide the name of the parameter to compute the R-hat")
+  }
+  parameterList <- lapply(myres, `[[`, stringName)
+  parameterMatrix <- do.call(cbind, parameterList)
+  rhatValue <- gelman_rhat(parameterMatrix)
+  return(rhatValue)
+}
+
+rhatMainPar <- function(myres, stringName = "") {
+  if (stringName == "") {
+    stop("Please provide the name of the parameter to compute the R-hat")
+  }
+  parameterList <- lapply(myres, `[[`, stringName)
+  if (stringName == "xi_nl" || stringName == "m_nl") {
+    d <- myres[[1]]$d
+    q <- sum(d)
+    p <- dim(myres[[1]]$X_lin)[2]
+    rhatValue <- rep(NA, q)
+    for (base in 1:q) {
+      parameterMatrix <- sapply(parameterList, function(mat) mat[, base])
+      rhatValue[base] <- gelman_rhat(parameterMatrix)
+    }
+  } else {
+    rhatValue <- rep(NA, p)
+    for (cov in 1:p) {
+      parameterMatrix <- sapply(parameterList, function(mat) mat[, cov])
+      rhatValue[cov] <- gelman_rhat(parameterMatrix)
+    }
+  }
+  return(rhatValue)
+}
+
+rhatIntPar <- function(myres, stringName = "") {
+  if (stringName == "") {
+    stop("Please provide the name of the parameter to compute the R-hat")
+  }
+  p <- dim(myres[[1]]$X_lin)[2]
+  d <- myres[[1]]$d
+  cd <- c(0, cumsum(d))
+  if (stringName == "xi_star_nl" || stringName == "m_star_nl") {
+    rhatValue <- c()
+    parameterList <- lapply(myres, `[[`, stringName)
+    for (j in 1:(p-1)) {
+      for (k in (j+1):p) {
+        parameterMatrix <- sapply(parameterList, 
+                                  function(lst) sapply(lst, function(mat) mat[j, (cd[k]+1):(cd[k+1])]))
+        rhatValue <- c(rhatValue, gelman_rhat(parameterMatrix))
+      }
+    }
+  } else {
+    rhatValue <- rep(NA, p*(p-1)/2)
+    indComb <- 1
+    parameterList <- lapply(myres, `[[`, stringName)
+    for (j in 1:(p-1)) {
+      for (k in (j+1):p) {
+        parameterMatrix <- sapply(parameterList, 
+                                     function(lst) sapply(lst, function(mat) mat[j, k]))
+        rhatValue[indComb] <- gelman_rhat(parameterMatrix)
+        indComb <- indComb + 1
+      }
+    }
+  }
+  return(rhatValue)
 }
 
 # This function calculates the Effective Sample Size (ESS) of a given sequence of samples. 
@@ -389,71 +456,123 @@ invParMCMC <- function(y, x, hyperpar = c(3, 1, 1, 1, 0.00025, 0.4, 1.6, 0.2, 1.
     cat(" Completed!\n\n")
     
     # Compute the R-hat statistic
-
-    # xi star linear
-    # xi star non linear
-    # m star linear
-    # m star non linear
-    # alpha star linear -
-    # alpha star non linear -
-    # xi linear
-    # xi non linear
-    # m linear
-    # m non linear
-    # theta linear - 
-    # theta non linear - 
-    # intercept -
-    # sigma -
-    
+    # M Star Linear PROBLEMA
+    rhatValueMStarLinear <- rhatIntPar(myres, "m_star_l")
+    # M Star Non Linear PROBLEMA
+    rhatValueMStarNonLinear <- rhatIntPar(myres, "m_star_nl")
     # Theta Linear
-    p <- ncol(x)
-    thetaLinearList <- lapply(myres, `[[`, "alpha_0_l")
-    for (cov in 1:p) {
-      thetaLinearMatrix <- sapply(thetaLinearList, function(mat) mat[, cov])
-      rhatValueThetaLinear <- gelman_rhat(thetaLinearMatrix)
-      cat("The R-hat for the linear main effect", cov, "is", rhatValueThetaLinear, "\n")
-    }
+    rhatValueThetaLinear <- rhatMainPar(myres, "theta_l")
     # Theta Non Linear
-    thetaNonLinearList <- lapply(myres, `[[`, "alpha_0_nl")
-    for (cov in 1:p) {
-      thetaNonLinearMatrix <- sapply(thetaNonLinearList, function(mat) mat[, cov])
-      rhatValueThetaNonLinear <- gelman_rhat(thetaNonLinearMatrix)
-      cat("The R-hat for the non-linear main effect", cov, "is", 
-          rhatValueThetaNonLinear, "\n")
-    }
+    rhatValueThetaNonLinear <- rhatMainPar(myres, "theta_nl")
+    # Xi Linear
+    rhatValueXiLinear <- rhatMainPar(myres, "xi_l")
+    # Xi Non Linear
+    rhatValueXiNonLinear <- rhatMainPar(myres, "xi_nl")
+    # M linear
+    rhatValueMLinear <- rhatMainPar(myres, "m_l")
+    # M Non Linear
+    rhatValueMNonLinear <- rhatMainPar(myres, "m_nl")
+    # Pi Linear
+    rhatValuePiLinear <- rhatSinglePar(myres, "pi_l")
+    # Pi Non Linear
+    rhatValuePiNonLinear <- rhatSinglePar(myres, "pi_nl")
+    # Pi Star Linear
+    rhatValuePiStarLinear <- rhatSinglePar(myres, "pi_star_l")
+    # Pi Star Non Linear
+    rhatValuePiStarNonLinear <- rhatSinglePar(myres, "pi_star_nl")
     # Alpha Star Linear
-    alphaStarLinearList <- lapply(myres, `[[`, "alpha_star_l")
-    for (j in 1:(p-1)) {
-      for (k in (j+1):p) {
-        alphaStarLinearMatrix <- sapply(alphaStarLinearList, 
-                                        function(lst) sapply(lst, function(mat) mat[j, k]))
-        rhatValueAlphaStarLinear <- gelman_rhat(alphaStarLinearMatrix)
-        cat("The R-hat for the linear interaction effect between", j, "and", k, "is", 
-            rhatValueAlphaStarLinear, "\n")
-      }
-    }
+    rhatValueAlphaStarLinear <- rhatIntPar(myres, "alpha_star_l")
     # Alpha Star Non Linear
-    alphaStarNonLinearList <- lapply(myres, `[[`, "alpha_star_nl")
-    for (j in 1:(p-1)) {
-      for (k in (j+1):p) {
-        alphaStarNonLinearMatrix <- sapply(alphaStarNonLinearList, 
-                                        function(lst) sapply(lst, function(mat) mat[j, k]))
-        rhatValueAlphaStarNonLinear <- gelman_rhat(alphaStarNonLinearMatrix)
-        cat("The R-hat for the non linear interaction effect between", j, "and", k, "is", 
-            rhatValueAlphaStarNonLinear, "\n")
-      }
-    }
+    rhatValueAlphaStarNonLinear <- rhatIntPar(myres, "alpha_star_nl")
+    # Tau Linear
+    rhatValueTauLinear <- rhatMainPar(myres, "tau_l")
+    # Tau Non Linear
+    rhatValueTauNonLinear <- rhatMainPar(myres, "tau_nl")
+    # Tau Star Linear
+    rhatValueTauStarLinear <- rhatIntPar(myres, "tau_star_l")
+    # Tau Star Non Linear
+    rhatValueTauStarNonLinear <- rhatIntPar(myres, "tau_star_nl")
+    # Xi Star Linear
+    rhatValueXiStarLinear <- rhatIntPar(myres, "xi_star_l")
+    # Xi Star Non Linear
+    rhatValueXiStarNonLinear <- rhatIntPar(myres, "xi_star_nl")
     # Intercept
-    interceptList <- lapply(myres, `[[`, "intercept")
-    interceptMatrix <- do.call(cbind, interceptList)
-    rhatValueIntercept <- gelman_rhat(interceptMatrix)
+    rhatValueIntercept <- rhatSinglePar(myres, "intercept")
     # Model Variance
-    sigmaList <- lapply(myres, `[[`, "sigma")
-    sigmaMatrix <- do.call(cbind, sigmaList)
-    rhatValueSigma <- gelman_rhat(sigmaMatrix)
-
-    cat("The R-hat for the intercept is", rhatValueIntercept, "\n")
-    cat("The R-hat for the model variance is", rhatValueSigma, "\n")
+    rhatValueSigma <- rhatSinglePar(myres, "sigma")
+    
+    # Collect all Rhat values into a vector
+    all_rhat <- c(
+      # Interaction parameters (matrix/array parameters)
+      rhatValueMStarLinear, rhatValueMStarNonLinear,
+      
+      # Main effect parameters (vector parameters)
+      rhatValueThetaLinear, rhatValueThetaNonLinear,
+      rhatValueXiLinear, rhatValueXiNonLinear,
+      rhatValueMLinear, rhatValueMNonLinear,
+      
+      # Probability parameters (scalars)
+      rhatValuePiLinear, rhatValuePiNonLinear,
+      rhatValuePiStarLinear, rhatValuePiStarNonLinear,
+      
+      # Interaction coefficients
+      rhatValueAlphaStarLinear, rhatValueAlphaStarNonLinear,
+      
+      # Variance parameters
+      rhatValueTauLinear, rhatValueTauNonLinear,
+      rhatValueTauStarLinear, rhatValueTauStarNonLinear,
+      
+      # Interaction weights
+      rhatValueXiStarLinear, rhatValueXiStarNonLinear,
+      
+      # Model fundamentals
+      rhatValueIntercept, rhatValueSigma
+    )
+    
+    # 1. Check for NA/NaN values 
+    if (anyNA(all_rhat) || any(is.nan(all_rhat))) {
+      warning("WARNING: NA/NaN values detected in Rhat statistics!")
+      message("Problematic positions:")
+      print(which(is.na(all_rhat) | is.nan(all_rhat)))
+    }
+    
+    # 2. Convergence check (Rhat <= 1.1 threshold)
+    threshold <- 1.1  # Standard convergence threshold
+    valid_rhat <- all_rhat[!is.na(all_rhat) & !is.nan(all_rhat)]
+    good_rhat_count <- sum(valid_rhat <= threshold, na.rm = TRUE)
+    total_valid <- length(valid_rhat)
+    
+    if (total_valid == 0) {
+      stop("ERROR: No valid Rhat values available for analysis")
+    }
+    
+    convergence_ratio <- good_rhat_count / total_valid
+    
+    if (convergence_ratio >= 0.95) {
+      message(sprintf(
+        "\u2705 %.1f%% of Rhat values (%d/%d) <= %.2f",
+        convergence_ratio * 100,
+        good_rhat_count,
+        total_valid,
+        threshold
+      ))
+    } else {
+      warning(sprintf(
+        "\u274c WARNING: Only %.1f%% of Rhat values (n = %d/%d) <= %.2f",
+        convergence_ratio * 100,
+        good_rhat_count,
+        total_valid,
+        threshold
+      ))
+      
+      # Show problematic values
+      message("Non-converged parameters (Rhat > ", threshold, "):")
+      print(round(valid_rhat[valid_rhat > threshold], 3))
+    }
+    
+    # 3. Detailed diagnostics report 
+    message("\nRhat Statistics Summary:")
+    print(summary(valid_rhat))
     
     # Compute the ESS
     
