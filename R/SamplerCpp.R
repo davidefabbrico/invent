@@ -541,13 +541,13 @@ invParMCMC <- function(y, x, hyperpar = c(3, 1, 1, 1, 0.00025, 0.4, 1.6, 0.2, 1.
       rhatValueIntercept, rhatValueSigma
     )
     
-    all_rhat <- round(all_rhat, 2)
+    all_rhat <- signif(all_rhat, 3)
     
     # 1. Check for NA/NaN values 
     if (anyNA(all_rhat) || any(is.nan(all_rhat))) {
       warning("WARNING: NA/NaN values detected in Rhat statistics!")
-      message("Problematic positions:")
-      print(which(is.na(all_rhat) | is.nan(all_rhat)))
+      # message("Problematic positions:")
+      # print(which(is.na(all_rhat) | is.nan(all_rhat)))
     }
     
     # 2. Convergence check (Rhat <= 1.1 threshold)
