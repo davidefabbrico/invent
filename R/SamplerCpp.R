@@ -384,28 +384,195 @@ rhatIntPar <- function(myres, stringName = "") {
   return(rhatValue)
 }
 
-# This function calculates the Effective Sample Size (ESS) of a given sequence of samples. 
-# ESS is a measure of the effective number of independent samples in a correlated Markov Chain Monte Carlo (MCMC) chain.
-# The function uses autocorrelations for lags up to a specified maximum (`max_lag`) to estimate how much dependence exists
-# between the samples and adjusts the total number of samples accordingly. The ESS can be used to assess the efficiency 
-# of the MCMC sampling process, with higher ESS values indicating better exploration of the parameter space.
-# 
-# Parameters:
-# - `samples`: A numeric vector of MCMC samples.
-# - `max_lag`: The maximum number of lags to consider when calculating autocorrelations (default is 100).
-# 
-# Returns:
-# - A numeric value representing the Effective Sample Size (ESS).
-calculate_ESS <- function(samples, max_lag = 100) {
-  # Calculate the autocorrelation for lags up to max_lag
-  acf_values <- acf(samples, plot = FALSE, lag.max = max_lag)$acf[-1]  # Remove lag 0
-  # Sum the autocorrelations up to the maximum lag
-  autocorr_sum <- sum(2 * acf_values)
-  # Calculate the ESS
-  n <- length(samples)
-  ESS <- n / (1 + 2 * autocorr_sum)
-  return(ESS)
+#' Compute Effective Sample Size (ESS) for Multiple MCMC Chains
+#'
+#' @description
+#' Calculates the Effective Sample Size (ESS) for a parameter across multiple 
+#' Markov Chain Monte Carlo (MCMC) chains using autocorrelation-based estimation.
+#' Handles both matrix and list inputs.
+#'
+#' @param chains A numeric matrix (columns = chains) or list of numeric vectors 
+#'               containing MCMC samples. All chains must have equal length.
+#' @param max_lag Maximum lag to consider for autocorrelation calculations 
+#'                (default = 1000). Use smaller values for faster computation.
+#'
+#' @return A list with components:
+#' \itemize{
+#'   \item \code{ESS} - Effective Sample Size estimate
+#'   \item \code{used_lags} - Number of lags used in the calculation
+#' }
+#'
+#' @details
+#' The function implements the following steps:
+#' 1. Input conversion: Matrix columns → list elements if needed
+#' 2. Autocorrelation function (ACF) calculation for each chain
+#' 3. Chain-averaged ACF computation
+#' 4. Geyer's initial positive sequence truncation
+#' 5. ESS calculation using truncated autocorrelation sum
+#'
+#' @section Methodological Notes:
+#' - Matrix input is more memory-efficient for large numbers of chains
+#' - Chains should be pre-processed (burn-in removed, convergence verified)
+#' - Returns conservative estimate by stopping at first negative ACF pair sum
+#' - Formula: ESS = (n_chains × n_samples) / [1 + 2Σ(autocorrelations)]
+#'
+#' @references
+#' Geyer, C.J. (1992). Practical Markov Chain Monte Carlo. Statistical Science.
+#' 
+#' @seealso
+#' For convergence diagnostics:
+#' - \code{coda::gelman.diag} for R-hat statistics
+#' - \code{posterior::ess_bulk} for alternative ESS implementations
+#'
+#' @note
+#' Key requirements:
+#' - All chains must have identical lengths
+#' - Remove burn-in periods before calculation
+#' - Minimum recommended ESS: 100-200 for reliable inference
+#' - Computation time grows with max_lag (O(n_chains × chain_length × max_lag))
+#'
+ESS_multiple_chains <- function(chains, max_lag = 1000) {
+  # Convert matrix to list of vectors
+  if (is.matrix(chains)) {
+    chains <- lapply(seq_len(ncol(chains)), function(i) chains[, i])
+  }
+  
+  # Input validation
+  if (!is.list(chains) || !all(sapply(chains, is.numeric))) {
+    stop("Input must be a numeric matrix (columns = chains) or list of numeric vectors")
+  }
+  
+  n_chains <- length(chains)
+  chain_lengths <- sapply(chains, length)
+  
+  if (length(unique(chain_lengths)) > 1) {
+    stop("All chains must have the same length")
+  }
+  chain_length <- chain_lengths[1]
+  
+  # Modified autocorrelation function with NA handling
+  compute_acf <- function(x, max_lag) {
+    n <- length(x)
+    x_centered <- x - mean(x)
+    var_x <- sum(x_centered^2) / n
+    
+    # Handle zero variance case
+    if (var_x == 0) return(rep(0, max_lag + 1))
+    
+    acf_vals <- numeric(max_lag + 1)
+    
+    for (k in 0:max_lag) {
+      if (k >= n) break
+      numerator <- sum(x_centered[1:(n - k)] * x_centered[(k + 1):n])
+      acf_vals[k + 1] <- numerator / (var_x * (n - k))
+    }
+    acf_vals
+  }
+  
+  # Calculate autocorrelations with NA protection
+  acf_list <- lapply(chains, compute_acf, max_lag = max_lag)
+  
+  # Convert to matrix and handle NA/NaN
+  acf_matrix <- do.call(cbind, acf_list)
+  acf_matrix[is.na(acf_matrix)] <- 0  # Replace NA/NaN with 0
+  
+  # Average autocorrelations across chains
+  mean_acf <- rowMeans(acf_matrix)
+  
+  # Find truncation point with NA-safe check
+  m <- 0
+  max_search <- min(max_lag, chain_length - 1)
+  
+  for (k in seq(1, max_search, by = 2)) {
+    if ((k + 2) > length(mean_acf)) break
+    
+    # Get current values with NA protection
+    val1 <- mean_acf[k + 1]
+    val2 <- mean_acf[k + 2]
+    
+    if (is.na(val1) || is.na(val2)) break
+    if ((val1 + val2) < 0) break
+    m <- k + 1
+  }
+  
+  # Calculate ESS with safe sum
+  valid_lags <- seq_len(m) + 1
+  valid_lags <- valid_lags[valid_lags <= length(mean_acf)]
+  sum_rho <- sum(mean_acf[valid_lags], na.rm = TRUE)
+  
+  total_samples <- n_chains * chain_length
+  ess <- total_samples / (1 + 2 * sum_rho)
+  
+  list(ESS = ess, used_lags = m)
 }
+
+ESSSinglePar <- function(myres, stringName = "") {
+  if (stringName == "") {
+    stop("Please provide the name of the parameter to compute the ESS")
+  }
+  parameterList <- lapply(myres, `[[`, stringName)
+  parameterMatrix <- do.call(cbind, parameterList)
+  essValue <- ESS_multiple_chains(parameterMatrix)$ESS
+  return(essValue)
+}
+
+ESSMainPar <- function(myres, stringName = "") {
+  if (stringName == "") {
+    stop("Please provide the name of the parameter to compute the R-hat")
+  }
+  parameterList <- lapply(myres, `[[`, stringName)
+  if (stringName == "xi_nl" || stringName == "m_nl") {
+    d <- myres[[1]]$d
+    q <- sum(d)
+    p <- dim(myres[[1]]$X_lin)[2]
+    ESSValue <- rep(NA, q)
+    for (base in 1:q) {
+      parameterMatrix <- sapply(parameterList, function(mat) mat[, base])
+      ESSValue[base] <- ESS_multiple_chains(parameterMatrix)$ESS
+    }
+  } else {
+    ESSValue <- rep(NA, p)
+    for (cov in 1:p) {
+      parameterMatrix <- sapply(parameterList, function(mat) mat[, cov])
+      ESSValue[cov] <- ESS_multiple_chains(parameterMatrix)$ESS
+    }
+  }
+  return(ESSValue)
+}
+
+ESSIntPar <- function(myres, stringName = "") {
+  if (stringName == "") {
+    stop("Please provide the name of the parameter to compute the R-hat")
+  }
+  p <- dim(myres[[1]]$X_lin)[2]
+  d <- myres[[1]]$d
+  cd <- c(0, cumsum(d))
+  if (stringName == "xi_star_nl" || stringName == "m_star_nl") {
+    ESSValue <- c()
+    parameterList <- lapply(myres, `[[`, stringName)
+    for (j in 1:(p-1)) {
+      for (k in (j+1):p) {
+        parameterMatrix <- sapply(parameterList, 
+                                  function(lst) sapply(lst, function(mat) mat[j, (cd[k]+1):(cd[k+1])]))
+        ESSValue <- c(ESSValue, ESS_multiple_chains(parameterMatrix)$ESS)
+      }
+    }
+  } else {
+    ESSValue <- rep(NA, p*(p-1)/2)
+    indComb <- 1
+    parameterList <- lapply(myres, `[[`, stringName)
+    for (j in 1:(p-1)) {
+      for (k in (j+1):p) {
+        parameterMatrix <- sapply(parameterList, 
+                                  function(lst) sapply(lst, function(mat) mat[j, k]))
+        ESSValue[indComb] <- ESS_multiple_chains(parameterMatrix)$ESS
+        indComb <- indComb + 1
+      }
+    }
+  }
+  return(ESSValue)
+}
+
 
 #' invParMCMC in Parallel
 #' 
@@ -512,12 +679,12 @@ invParMCMC <- function(y, x, hyperpar = c(3, 1, 1, 1, 0.00025, 0.4, 1.6, 0.2, 1.
     # Collect all Rhat values into a vector
     all_rhat <- c(
       # Interaction parameters (matrix/array parameters)
-      rhatValueMStarLinear, rhatValueMStarNonLinear,
+      # rhatValueMStarLinear, rhatValueMStarNonLinear,
       
       # Main effect parameters (vector parameters)
       rhatValueThetaLinear, rhatValueThetaNonLinear,
-      rhatValueXiLinear, rhatValueXiNonLinear,
-      rhatValueMLinear, rhatValueMNonLinear,
+      # rhatValueXiLinear, rhatValueXiNonLinear,
+      # rhatValueMLinear, rhatValueMNonLinear,
       
       # Probability parameters (scalars)
       rhatValuePiLinear, rhatValuePiNonLinear,
@@ -531,11 +698,11 @@ invParMCMC <- function(y, x, hyperpar = c(3, 1, 1, 1, 0.00025, 0.4, 1.6, 0.2, 1.
       rhatValueTauStarLinear, rhatValueTauStarNonLinear,
       
       # Selection parameters
-      rhatValueGammaLinear, rhatValueGammaNonLinear,
-      rhatValueGammaStarLinear, rhatValueGammaStarNonLinear,
+      # rhatValueGammaLinear, rhatValueGammaNonLinear,
+      # rhatValueGammaStarLinear, rhatValueGammaStarNonLinear,
       
       # Interaction Xi Star parameters
-      rhatValueXiStarLinear, rhatValueXiStarNonLinear,
+      # rhatValueXiStarLinear, rhatValueXiStarNonLinear,
       
       # Model fundamentals
       rhatValueIntercept, rhatValueSigma
@@ -588,7 +755,115 @@ invParMCMC <- function(y, x, hyperpar = c(3, 1, 1, 1, 0.00025, 0.4, 1.6, 0.2, 1.
     message("\nRhat Statistics Summary:")
     print(summary(valid_rhat))
     
-    # Compute the ESS
+    # # Compute the ESS
+    # M Star Linear 
+    ESSValueMStarLinear <- ESSIntPar(myres, "m_star_l")
+    # M Star Non Linear 
+    ESSValueMStarNonLinear <- ESSIntPar(myres, "m_star_nl")
+    # Gamma star linear
+    ESSValueGammaStarLinear <- ESSIntPar(myres, "gamma_star_l")
+    # Gamma star Non Linear
+    ESSValueGammaStarNonLinear <- ESSIntPar(myres, "gamma_star_nl")
+    # Theta Linear
+    ESSValueThetaLinear <- ESSMainPar(myres, "theta_l")
+    # Theta Non Linear
+    ESSValueThetaNonLinear <- ESSMainPar(myres, "theta_nl")
+    # Xi Linear
+    ESSValueXiLinear <- ESSMainPar(myres, "xi_l")
+    # Xi Non Linear
+    ESSValueXiNonLinear <- ESSMainPar(myres, "xi_nl")
+    # M linear
+    ESSValueMLinear <- ESSMainPar(myres, "m_l")
+    # M Non Linear
+    ESSValueMNonLinear <- ESSMainPar(myres, "m_nl")
+    # Pi Linear
+    ESSValuePiLinear <- ESSSinglePar(myres, "pi_l")
+    # # Pi Non Linear
+    ESSValuePiNonLinear <- ESSSinglePar(myres, "pi_nl")
+    # Gamma linear
+    ESSValueGammaLinear <- ESSMainPar(myres, "gamma_l")
+    # Gamma Non Linear
+    ESSValueGammaNonLinear <- ESSMainPar(myres, "gamma_nl")
+    # Pi Star Linear
+    ESSValuePiStarLinear <- ESSSinglePar(myres, "pi_star_l")
+    # # Pi Star Non Linear
+    ESSValuePiStarNonLinear <- ESSSinglePar(myres, "pi_star_nl")
+    # Alpha Star Linear
+    ESSValueAlphaStarLinear <- ESSIntPar(myres, "alpha_star_l")
+    # Alpha Star Non Linear
+    ESSValueAlphaStarNonLinear <- ESSIntPar(myres, "alpha_star_nl")
+    # Tau Linear
+    ESSValueTauLinear <- ESSMainPar(myres, "tau_l")
+    # Tau Non Linear
+    ESSValueTauNonLinear <- ESSMainPar(myres, "tau_nl")
+    # Tau Star Linear
+    ESSValueTauStarLinear <- ESSIntPar(myres, "tau_star_l")
+    # Tau Star Non Linear
+    ESSValueTauStarNonLinear <- ESSIntPar(myres, "tau_star_nl")
+    # Xi Star Linear
+    ESSValueXiStarLinear <- ESSIntPar(myres, "xi_star_l")
+    # Xi Star Non Linear
+    ESSValueXiStarNonLinear <- ESSIntPar(myres, "xi_star_nl")
+    # Intercept
+    ESSValueIntercept <- ESSSinglePar(myres, "intercept")
+    # Model Variance
+    ESSValueSigma <- ESSSinglePar(myres, "sigma")
+    
+    # Collect all ESS values into a vector
+    all_ESS <- c(
+      ESSValueThetaLinear, ESSValueThetaNonLinear,
+      ESSValuePiLinear, ESSValuePiNonLinear,
+      ESSValuePiStarLinear, ESSValuePiStarNonLinear,
+      ESSValueAlphaStarLinear, ESSValueAlphaStarNonLinear,
+      ESSValueTauLinear, ESSValueTauNonLinear,
+      ESSValueTauStarLinear, ESSValueTauStarNonLinear,
+      ESSValueIntercept, ESSValueSigma
+    )
+    
+    # ESS Statistics
+    ess_mean <- mean(all_ESS, na.rm = TRUE)
+    ess_min <- min(all_ESS, na.rm = TRUE)
+    ess_above_100 <- sum(all_ESS >= 100, na.rm = TRUE)
+    ess_below_100 <- sum(all_ESS < 100 & all_ESS >= 50, na.rm = TRUE)
+    ess_critical <- sum(all_ESS < 50, na.rm = TRUE)
+    total_params <- length(all_ESS)
+    
+    GREEN <- "\033[32m"
+    YELLOW <- "\033[33m"
+    RED <- "\033[31m"
+    RESET <- "\033[0m"
+    
+    # Message
+    report <- paste0(
+      "\n\n",
+      "══════════════════ Effective Sample Size Report ══════════════════\n",
+      "  \u2022 Mean ESS: ", round(ess_mean, 1), 
+      ifelse(ess_mean >= 500, paste0(GREEN, " \u2714 Excellent", RESET),
+             ifelse(ess_mean >= 200, paste0(GREEN, " \u2714 Good", RESET),
+                    ifelse(ess_mean >= 100, paste0(YELLOW, " \u26A0 Acceptable", RESET),
+                           paste0(RED, " \u274c Critical", RESET)))),
+      "\n",
+      "  \u2022 Min ESS: ", round(ess_min, 1), 
+      ifelse(ess_min >= 100, paste0(GREEN, " \u2714", RESET),
+             paste0(RED, " \u274c", RESET)),
+      "\n",
+      "  \u2022 Parameters distribution:\n",
+      "    ", GREEN, sprintf("\u25CF %2.0f%%", 100*ess_above_100/total_params), 
+      " (", ess_above_100, ") ≥ 100 - Good\n", RESET,
+      "    ", YELLOW, sprintf("\u25CF %2.0f%%", 100*ess_below_100/total_params),
+      " (", ess_below_100, ") 50-99 - Monitor\n", RESET,
+      "    ", RED, sprintf("\u25CF %2.0f%%", 100*ess_critical/total_params),
+      " (", ess_critical, ") < 50 - Needs action\n", RESET,
+      "══════════════════════════════════════════════════════════════\n",
+      "Recommendations:\n",
+      if(ess_critical > 0) paste0(RED, "  \u26A0 Increase iterations for ", 
+                                  ess_critical, " critical parameters\n", RESET),
+      if(ess_below_100 > 0) paste0(YELLOW, "  \u26A0 Consider longer chains for ", 
+                                   ess_below_100, " parameters\n", RESET),
+      GREEN, "  \u2714 ", ess_above_100, " parameters have sufficient ESS\n", RESET
+    )
+    
+    cat(report)
     
   } # end check cores
   

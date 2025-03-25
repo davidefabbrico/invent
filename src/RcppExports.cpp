@@ -12,7 +12,7 @@ Rcpp::Rostream<false>& Rcpp::Rcerr = Rcpp::Rcpp_cerr_get();
 #endif
 
 // bodyMCMC
-List bodyMCMC(arma::vec y, int p, int nobs, arma::vec cd, arma::vec d, arma::mat X_l, arma::mat X_nl, arma::mat X_val_l, arma::mat X_val_nl, arma::vec hyperpar, arma::vec mht, int n_cat, int iter, int burnin, int thin, int ha, bool detail, bool pb);
+Rcpp::List bodyMCMC(arma::vec y, int p, int nobs, arma::vec cd, arma::vec d, arma::mat X_l, arma::mat X_nl, arma::mat X_val_l, arma::mat X_val_nl, arma::vec hyperpar, arma::vec mht, int n_cat, int iter, int burnin, int thin, int ha, bool detail, bool pb);
 RcppExport SEXP _invent_bodyMCMC(SEXP ySEXP, SEXP pSEXP, SEXP nobsSEXP, SEXP cdSEXP, SEXP dSEXP, SEXP X_lSEXP, SEXP X_nlSEXP, SEXP X_val_lSEXP, SEXP X_val_nlSEXP, SEXP hyperparSEXP, SEXP mhtSEXP, SEXP n_catSEXP, SEXP iterSEXP, SEXP burninSEXP, SEXP thinSEXP, SEXP haSEXP, SEXP detailSEXP, SEXP pbSEXP) {
 BEGIN_RCPP
     Rcpp::RObject rcpp_result_gen;

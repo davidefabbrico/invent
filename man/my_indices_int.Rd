@@ -4,7 +4,7 @@
 \alias{my_indices_int}
 \title{my_indices_int}
 \usage{
-my_indices_int(est, truth, linear = TRUE, d, omega_tilde)
+my_indices_int(est, truth, linear = TRUE, d, omega_nl)
 }
 \description{
 my_indices_int

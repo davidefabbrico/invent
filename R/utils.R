@@ -199,11 +199,15 @@ gendata <- function(n_obs = 200, p = 10, minb = 1.5, maxb = 3.0, error = 0.01,
   }
   
   # inizialize xi linear and xi non linear
-  xi_l <- sample(c(-1, 1), p, replace = TRUE)
-  xi_tilde <- c()
-  for (i in 1:p) {
-    xi_tilde <- c(xi_tilde, rep(xi_l[i], d[i]))
-  }
+  # xi_l <- sample(c(-1, 1), p, replace = TRUE)
+  # xi_tilde <- c()
+  # for (i in 1:p) {
+  #   xi_tilde <- c(xi_tilde, rep(xi_l[i], d[i]))
+  # }
+  m_l <- sample(c(-1, 1), size = p, replace = TRUE, prob = c(0.5, 0.5))
+  m_nl <- sample(c(-1, 1), size = q, replace = TRUE, prob = c(0.5, 0.5))
+  xi_l <- rnorm(p, m_l, 1)
+  xi_tilde <- rnorm(q, m_nl, 1)
   
   # compute beta linear and non linear
   beta_l <- matrix(0, nrow = n_obs, ncol = p)

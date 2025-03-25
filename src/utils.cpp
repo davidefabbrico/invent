@@ -1,3 +1,7 @@
+#include <iostream>
+#include <iomanip>
+#include <string>
+#include <cmath>
 #include <RcppArmadillo.h>
 #include <math.h>
 #include <R.h>
@@ -8,6 +12,51 @@
 using namespace Rcpp;
 using namespace arma;
 using namespace std;
+
+
+void print_progress(int t, int iter, bool pb, const std::chrono::time_point<std::chrono::steady_clock>& start_time) {
+  if (!pb) return;
+  
+  const int bar_width = 50;
+  // Correzione: usa min(t, iter) per evitare overshooting
+  float progress = static_cast<float>(std::min(t, iter)) / iter; 
+  int pos = static_cast<int>(bar_width * progress);
+  
+  auto now = std::chrono::steady_clock::now();
+  auto elapsed = std::chrono::duration_cast<std::chrono::milliseconds>(now - start_time).count();
+  double elapsed_sec = elapsed / 1000.0;
+  double speed = (t > 0) ? t / std::max(0.1, elapsed_sec) : 0;
+  int remaining = static_cast<int>((iter - t) / std::max(1.0, speed));
+  
+  std::cout << "\r\033[1;36m[";
+  
+  for (int i = 0; i < bar_width; ++i) {
+    if (i < pos || t >= iter) std::cout << "=";
+    else if (i == pos) std::cout << ">";
+    else std::cout << " ";
+  }
+  
+  int percent = static_cast<int>(std::ceil(progress * 100));
+  if (t >= iter) percent = 100;
+  
+  std::cout << "] \033[1;33m" << std::setw(3) << percent << "%\033[0m ";
+  std::cout << "Iter: \033[1;35m" << t + 1 << "\033[0m/\033[1;35m" << iter << "\033[0m ";
+  
+  if (elapsed_sec < 0.1) {
+    std::cout << "[\033[1;32m" << std::fixed << std::setprecision(1) << elapsed_sec*1000 << "ms\033[0m]";
+  } else {
+    std::cout << "[\033[1;32m" << std::fixed << std::setprecision(1) << elapsed_sec << "s\033[0m < \033[1;31m" << remaining << "s\033[0m]";
+  }
+  
+  std::cout << " (\033[1;34m~" << std::fixed << std::setprecision(1) << speed << " it/s\033[0m)";
+  std::cout.flush();
+  
+  if (t >= iter - 1) {
+    std::cout << "\n\033[1;32m✓ MCMC completed successfully!\033[0m\n";
+    std::cout << "Total time: \033[1;36m" << elapsed_sec << " seconds\033[0m\n";
+  }
+}
+
 
 // [[Rcpp::depends(RcppArmadillo)]]
 
@@ -215,7 +264,7 @@ List update_alphaC(arma::vec y, double sigma, double tau, double gamma,
   int acc_alpha = 0;
   double a = accu(dnormLogVec(y, eta_star, sqrt(sigma)));
   double b = normal_log_pdf(alpha_star, 0, sqrt(tau*gamma));
-  double num_alpha = a+b;
+  double num_alpha = a + b;
   double den_alpha = accu(dnormLogVec(y, eta_pl, sqrt(sigma))) + normal_log_pdf(alpha, 0, sqrt(tau*gamma));
   double ratio_alpha = num_alpha - den_alpha;
   double lsamp = log(randu<arma::vec>(1)(0));
@@ -416,8 +465,8 @@ Rcpp::List bodyMCMC(arma::vec y, int p, int nobs, arma::vec cd, arma::vec d, arm
   // weak heredity = 1
   // strong heredity = 2
   int q = arma::accu(d);
-  // Number of non linear basis (n-n_cat)
-  int nlp = p - n_cat; // the categorical one are the last ones
+  // Number of non linear basis (n - n_cat)
+  int nlp = p - n_cat; // the categorical covariates are the last ones in the design matrix
   arma::vec vecOnes = arma::ones(nobs, 1);
   arma::vec interactions(nobs);
   // pi star linear 
@@ -632,8 +681,38 @@ Rcpp::List bodyMCMC(arma::vec y, int p, int nobs, arma::vec cd, arma::vec d, arm
   ////////////////////////////////////////////////////
   //////////////////// Start MCMC ////////////////////
   ///////////////////////////////////////////////////
-  if (pb == true) {
-    std::cout << "Running MCMC loop:\n";
+  // PRINT FREQUENCY
+  int print_freq;
+  if (iter <= 500) {
+    print_freq = 100;
+    std::cout << "\033[1;33m"; // Colore giallo
+    std::cout << "-----------------------------------------------------------------\n";
+    std::cout << " WARNING: Only " << iter << " iterations requested.\n";
+    std::cout << " For reliable MCMC results, consider increasing to at least 1000.\n";
+    std::cout << "-----------------------------------------------------------------\n";
+    std::cout << "\033[0m"; // Reset colore
+  } else {
+    print_freq = static_cast<int>(std::pow(10, std::floor(std::log10(iter)) - 1));
+    print_freq = std::max(200, print_freq);
+  }
+  const int CRITICAL_ITERATIONS = 500000;
+  if (iter >= CRITICAL_ITERATIONS && detail) {
+    const double estimated_mb = (iter * 3 * sizeof(double)) / (1024.0 * 1024.0);
+    std::cerr << "\n\033[1;33m[WARNING] Memory overload risk:\033[0m\n"
+              << "======================================================\n"
+              << "  You're running " << iter << " iterations with detail=true\n"
+              << "  \033[1;31mEstimated memory for iteration matrices: ~" 
+              << std::round(estimated_mb) << " MB\033[0m\n\n"
+              << "  \033[1;32mSolution:\033[0m\n"
+              << "  Set detail = FALSE to store only essential data\n"
+              << "  (reduces memory usage by not saving intermediate states)\n"
+              << "======================================================\n\n";
+  }
+  // if (pb == true) {
+  //   std::cout << "Running MCMC loop:\n";
+  // }
+  if (pb) {
+    std::cout << "\033[1;34mStarting MCMC with " << iter << " iterations...\033[0m\n";
   }
   for (int t = 0; t<iter; t++) {
     // update pi start linear
@@ -1350,13 +1429,20 @@ Rcpp::List bodyMCMC(arma::vec y, int p, int nobs, arma::vec cd, arma::vec d, arm
       }
       idx = idx + 1;
     }
-    if (pb == true && t%500 == 0 && t > 0) {
-      std::cout << "Iteration: " << t << " (of " << iter << ")\n";
+    
+    // pb && (t % 50 == 0 || t == iter)
+    if (pb && (t % print_freq == 0 || t == iter - 1) && t > 0) {
+      print_progress(t, iter, pb, start);
     }
+    
+    // if (pb == true && t%print_freq == 0 && t > 0) {
+    //   std::cout << "Iteration: " << t << " (of " << iter << ")\n";
+    // }
+    
   } // end iteration
-  if (pb == true) {
-    std::cout << "End MCMC!\n";
-  }
+  // if (pb == true) {
+  //   std::cout << "\nEnd MCMC!\n";
+  // }
   ////////////////////////////////////////////////////
   //////////////////// End MCMC //////////////////////
   ///////////////////////////////////////////////////
