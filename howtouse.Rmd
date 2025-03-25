@@ -263,7 +263,7 @@ The function can return a **detailed output** or a **simplified version**, based
 
 This section describes the functions used to generate plots for the **Marginal Posterior Probability of Inclusion (MPPI)**, which helps visualize the selection probabilities of covariates and interactions.
 
-### `mppi_plot(resultMCMC)`
+#### `mppi_plot(resultMCMC)`
 
 The `mppi_plot` function creates and returns a combined MPPI plot for different effect types.
 
@@ -299,7 +299,7 @@ mppi_res <- invent::mppi_plot(out)
 
 ---
 
-## `invParMCMC` - Parallel MCMC Implementation
+## `invParMCMC` - Parallel MCMC
 
 ### Description
 
@@ -315,7 +315,7 @@ invParMCMC(y, x, hyperpar = c(3, 1, 1, 1, 0.00025, 0.4, 1.6, 0.2, 1.8, 0.4, 1.6,
 )
 ```
 
-## Arguments
+### Arguments
 
 | Argument           | Description |
 |--------------------|-------------|
@@ -361,25 +361,11 @@ The function automatically checks for convergence using:
 ### Examples
 
 #### Basic Usage
-```{r, eval=TRUE}
-res0 <- invParMCMC(y = y, x = x, iter = iterations, PredOutOfSample = TRUE, 
-                burnin = burnin, mht = c(0.8, 0.2, 0.2, 0.6, 0.4, 0.4, 3, 1.4), thin = thin,
-                ha = 2, hyperpar = c(5, 25, 3, 1, 0.00025, 0.4, 1.6, 0.2, 1.8, 0.4, 1.6, 0.2, 1.8), 
-                nchain = 3, percValidationSet = 20, data = data)
+```{r, eval=FALSE}
+invent::invParMCMC(y = y, x = x, iter = iterations, PredOutOfSample = TRUE, 
+                   burnin = burnin, mht = c(0.8, 0.2, 0.2, 0.6, 0.4, 0.4, 3, 1.4), 
+                   thin = thin, ha = 2, 
+                   hyperpar = c(5, 25, 3, 1, 0.00025, 0.4, 1.6, 0.2, 1.8, 0.4, 1.6, 0.2, 1.8),
+                   nchain = 3, percValidationSet = 20, data = data)
 ```
-
-### Parallel Processing
-
-The function automatically:
-- Detects available cores
-- Validates requested number of chains
-- Uses `doParallel` and `doRNG` for reproducible parallel computation
-
-### Output Interpretation
-
-The function provides:
-1. Progress messages during execution
-2. Color-coded convergence reports
-3. Detailed parameter-specific diagnostics
-4. Actionable recommendations for problematic parameters
 
