@@ -1835,10 +1835,13 @@ non-linear interaction effects.</li>
 <h4>Detailed vs. Standard Output</h4>
 <p>The function can return a <strong>detailed output</strong> or a
 <strong>simplified version</strong>, based on the <code>detail</code>
-argument: - <strong>If <code>detail = TRUE</code></strong> → Returns the
-full <code>result</code> object. - <strong>If
-<code>detail = FALSE</code></strong> → Returns only the relevant metrics
-based on the input conditions.</p>
+argument:</p>
+<ul>
+<li>If <strong><code>detail = TRUE</code></strong> → Returns the full
+<code>result</code> object.</li>
+<li>If <strong><code>detail = FALSE</code></strong> → Returns only the
+relevant metrics based on the input conditions.</li>
+</ul>
 </div>
 <div id="summary-table" class="section level4">
 <h4>Summary Table</h4>
@@ -1983,8 +1986,194 @@ interaction effect selection.</li>
 </div>
 </div>
 </div>
-<div id="parallel-computing" class="section level2">
-<h2>Parallel Computing</h2>
+<div id="invparmcmc---parallel-mcmc-implementation" class="section level2">
+<h2><code>invParMCMC</code> - Parallel MCMC Implementation</h2>
+</div>
+<div id="description" class="section level2">
+<h2>Description</h2>
+<p>This function implements a parallel Markov Chain Monte Carlo (MCMC)
+algorithm for Bayesian inference, running multiple chains simultaneously
+to improve convergence diagnostics. The function automatically handles
+convergence checking using R-hat statistics and effective sample size
+(ESS) calculations.</p>
+</div>
+<div id="usage-1" class="section level2">
+<h2>Usage</h2>
+<pre class="r"><code>invParMCMC(
+  y,
+  x,
+  hyperpar = c(3, 1, 1, 1, 0.00025, 0.4, 1.6, 0.2, 1.8, 0.4, 1.6, 0.2, 1.8),
+  mht = c(1.4, 0.8, 1, 0.3, 0.7, 0.4, 4, 2.5),
+  PredOutOfSample = TRUE,
+  rank = 0.95,
+  iter = 10000,
+  burnin = iter/2,
+  thin = 5,
+  ha = 2,
+  data = NULL,
+  nchain = 2,
+  percValidationSet = 20,
+  seed = 10
+)</code></pre>
+</div>
+<div id="arguments" class="section level2">
+<h2>Arguments</h2>
+<table>
+<colgroup>
+<col width="60%" />
+<col width="39%" />
+</colgroup>
+<thead>
+<tr class="header">
+<th>Argument</th>
+<th>Description</th>
+</tr>
+</thead>
+<tbody>
+<tr class="odd">
+<td><code>y</code></td>
+<td>Response variable vector</td>
+</tr>
+<tr class="even">
+<td><code>x</code></td>
+<td>Design matrix of predictors</td>
+</tr>
+<tr class="odd">
+<td><code>hyperpar</code></td>
+<td>Vector of hyperparameters (default values shown)</td>
+</tr>
+<tr class="even">
+<td><code>mht</code></td>
+<td>Metropolis-Hastings tuning parameters (default values shown)</td>
+</tr>
+<tr class="odd">
+<td><code>PredOutOfSample</code></td>
+<td>Logical indicating whether to perform out-of-sample prediction
+(default: TRUE)</td>
+</tr>
+<tr class="even">
+<td><code>rank</code></td>
+<td>Threshold for rank selection (default: 0.95)</td>
+</tr>
+<tr class="odd">
+<td><code>iter</code></td>
+<td>Total number of MCMC iterations (default: 10,000)</td>
+</tr>
+<tr class="even">
+<td><code>burnin</code></td>
+<td>Number of burn-in iterations (default: iter/2)</td>
+</tr>
+<tr class="odd">
+<td><code>thin</code></td>
+<td>Thinning interval (default: 5)</td>
+</tr>
+<tr class="even">
+<td><code>ha</code></td>
+<td>Hyperparameter adjustment factor (default: 2)</td>
+</tr>
+<tr class="odd">
+<td><code>data</code></td>
+<td>Optional data frame containing variables</td>
+</tr>
+<tr class="even">
+<td><code>nchain</code></td>
+<td>Number of parallel chains to run (default: 2)</td>
+</tr>
+<tr class="odd">
+<td><code>percValidationSet</code></td>
+<td>Percentage of data for validation set (default: 20)</td>
+</tr>
+<tr class="even">
+<td><code>seed</code></td>
+<td>Random seed for reproducibility (default: 10)</td>
+</tr>
+</tbody>
+</table>
+</div>
+<div id="value" class="section level2">
+<h2>Value</h2>
+<p>The function returns a list containing:</p>
+<ol style="list-style-type: decimal">
+<li>MCMC results from each chain</li>
+<li>Comprehensive convergence diagnostics including:
+<ul>
+<li>R-hat statistics for all parameters</li>
+<li>Effective Sample Size (ESS) calculations</li>
+<li>Convergence warnings and recommendations</li>
+</ul></li>
+</ol>
+</div>
+<div id="convergence-diagnostics" class="section level2">
+<h2>Convergence Diagnostics</h2>
+<p>The function automatically checks for convergence using:</p>
+<ol style="list-style-type: decimal">
+<li><strong>R-hat statistics</strong> (Gelman-Rubin diagnostic):
+<ul>
+<li>Values ≤ 1.1 indicate good convergence</li>
+<li>Detailed report of problematic parameters</li>
+</ul></li>
+<li><strong>Effective Sample Size (ESS)</strong>:
+<ul>
+<li>Parameters classified as:
+<ul>
+<li>Good (ESS ≥ 100)</li>
+<li>Needs monitoring (50 ≤ ESS &lt; 100)</li>
+<li>Critical (ESS &lt; 50)</li>
+</ul></li>
+</ul></li>
+</ol>
+</div>
+<div id="examples" class="section level2">
+<h2>Examples</h2>
+<div id="basic-usage" class="section level3">
+<h3>Basic Usage</h3>
+<pre class="r"><code># Simulate data
+set.seed(123)
+x &lt;- matrix(rnorm(1000), ncol = 10)
+y &lt;- rnorm(100)
+
+# Run parallel MCMC
+result &lt;- invParMCMC(y = y, x = x, nchain = 4, iter = 5000)</code></pre>
+</div>
+<div id="with-custom-parameters" class="section level3">
+<h3>With Custom Parameters</h3>
+<pre class="r"><code>result &lt;- invParMCMC(
+  y = y,
+  x = x,
+  hyperpar = c(5, 2, 1, 1, 0.0001, 0.5, 2, 0.3, 2, 0.5, 2, 0.3, 2),
+  mht = c(1.5, 1, 1.2, 0.4, 0.8, 0.5, 5, 3),
+  iter = 20000,
+  burnin = 5000,
+  nchain = 3
+)</code></pre>
+</div>
+</div>
+<div id="parallel-processing" class="section level2">
+<h2>Parallel Processing</h2>
+<p>The function automatically: - Detects available cores - Validates
+requested number of chains - Uses <code>doParallel</code> and
+<code>doRNG</code> for reproducible parallel computation</p>
+</div>
+<div id="output-interpretation" class="section level2">
+<h2>Output Interpretation</h2>
+<p>The function provides: 1. Progress messages during execution 2.
+Color-coded convergence reports 3. Detailed parameter-specific
+diagnostics 4. Actionable recommendations for problematic parameters</p>
+</div>
+<div id="notes" class="section level2">
+<h2>Notes</h2>
+<ol style="list-style-type: decimal">
+<li><p>For large datasets, consider:</p>
+<ul>
+<li>Increasing <code>iter</code> and <code>burnin</code></li>
+<li>Using more chains (<code>nchain</code>) for better diagnostics</li>
+<li>Monitoring memory usage</li>
+</ul></li>
+<li><p>The validation set is only created when
+<code>PredOutOfSample = TRUE</code></p></li>
+<li><p>All output is automatically formatted for clear interpretation in
+R consoles</p></li>
+</ol>
 </div>
 
 

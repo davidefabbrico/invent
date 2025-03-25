@@ -581,291 +581,286 @@ invParMCMC <- function(y, x, hyperpar = c(3, 1, 1, 1, 0.00025, 0.4, 1.6, 0.2, 1.
                       mht = c(1.4, 0.8, 1, 0.3, 0.7, 0.4, 4, 2.5), PredOutOfSample = TRUE,
                       rank = 0.95, iter = 10000, burnin = iter/2, thin = 5, ha = 2, 
                       data = NULL, nchain = 2, percValidationSet = 20, seed = 10) {
-  # Check the number of cores
-  if (detectCores() < nchain) {
-    stop("The number of cores is less than the number of chains")
-  } else {
-    # Parallel
-    nobs <- length(y)
-    cor_all <- nchain
-    percentage_to_select <- percValidationSet
-    num_to_select <- round(nobs * (percentage_to_select / 100))
-    registerDoParallel(cores = cor_all)
-    registerDoRNG(seed = seed)
-    cat("Starting parallel MCMC with", cor_all, "chains, n =", nobs, "and p =", p, "...")
-    myres <- foreach(k = 1:cor_all) %dorng% {
-      if (PredOutOfSample) {
-        random_sample <- sample(1:nobs, num_to_select)
-        x_train <- x[-random_sample,]
-        y_train <- y[-random_sample]
-        x_val <- x[random_sample,]
-        y_val <- y[random_sample]
-      } else {
-        x_val <- NULL
-        y_val <- NULL
-      }
-      # Start the MCMC
-      if (is.null(data)) {
-        res0 <- invMCMC(y = y_train, x = x_train, y_val = y_val, x_val = x_val, 
-                        iter = iter, burnin = burnin, 
-                        mht = mht, thin = thin, ha = ha, 
-                        hyperpar = hyperpar, detail = TRUE, pb = FALSE)
-      } else {
-        res0 <- invMCMC(y = y_train, x = x_train, y_val = y_val, x_val = x_val, 
-                        iter = iter, burnin = burnin, 
-                        mht = mht, thin = thin, ha = ha, 
-                        hyperpar = hyperpar, detail = TRUE, pb = FALSE, 
-                        data = data)
-        # ritornare solo quello che ci interessa
-      }
-      return(res0)
-    } # end parallel
-    cat(" Completed!\n\n")
-    
-    # Compute the R-hat statistic
-    # M Star Linear 
-    rhatValueMStarLinear <- rhatIntPar(myres, "m_star_l")
-    # M Star Non Linear 
-    rhatValueMStarNonLinear <- rhatIntPar(myres, "m_star_nl")
-    # Gamma star linear
-    rhatValueGammaStarLinear <- rhatIntPar(myres, "gamma_star_l")
-    # Gamma star Non Linear
-    rhatValueGammaStarNonLinear <- rhatIntPar(myres, "gamma_star_nl")
-    # Theta Linear
-    rhatValueThetaLinear <- rhatMainPar(myres, "theta_l")
-    # Theta Non Linear
-    rhatValueThetaNonLinear <- rhatMainPar(myres, "theta_nl")
-    # Xi Linear
-    rhatValueXiLinear <- rhatMainPar(myres, "xi_l")
-    # Xi Non Linear
-    rhatValueXiNonLinear <- rhatMainPar(myres, "xi_nl")
-    # M linear
-    rhatValueMLinear <- rhatMainPar(myres, "m_l")
-    # M Non Linear
-    rhatValueMNonLinear <- rhatMainPar(myres, "m_nl")
-    # Pi Linear
-    rhatValuePiLinear <- rhatSinglePar(myres, "pi_l")
-    # Pi Non Linear
-    rhatValuePiNonLinear <- rhatSinglePar(myres, "pi_nl")
-    # Gamma linear
-    rhatValueGammaLinear <- rhatMainPar(myres, "gamma_l")
-    # Gamma Non Linear
-    rhatValueGammaNonLinear <- rhatMainPar(myres, "gamma_nl")
-    # Pi Star Linear
-    rhatValuePiStarLinear <- rhatSinglePar(myres, "pi_star_l")
-    # Pi Star Non Linear
-    rhatValuePiStarNonLinear <- rhatSinglePar(myres, "pi_star_nl")
-    # Alpha Star Linear
-    rhatValueAlphaStarLinear <- rhatIntPar(myres, "alpha_star_l")
-    # Alpha Star Non Linear
-    rhatValueAlphaStarNonLinear <- rhatIntPar(myres, "alpha_star_nl")
-    # Tau Linear
-    rhatValueTauLinear <- rhatMainPar(myres, "tau_l")
-    # Tau Non Linear
-    rhatValueTauNonLinear <- rhatMainPar(myres, "tau_nl")
-    # Tau Star Linear
-    rhatValueTauStarLinear <- rhatIntPar(myres, "tau_star_l")
-    # Tau Star Non Linear
-    rhatValueTauStarNonLinear <- rhatIntPar(myres, "tau_star_nl")
-    # Xi Star Linear
-    rhatValueXiStarLinear <- rhatIntPar(myres, "xi_star_l")
-    # Xi Star Non Linear
-    rhatValueXiStarNonLinear <- rhatIntPar(myres, "xi_star_nl")
-    # Intercept
-    rhatValueIntercept <- rhatSinglePar(myres, "intercept")
-    # Model Variance
-    rhatValueSigma <- rhatSinglePar(myres, "sigma")
-    
-    # Collect all Rhat values into a vector
-    all_rhat <- c(
-      # Interaction parameters (matrix/array parameters)
-      # rhatValueMStarLinear, rhatValueMStarNonLinear,
-      
-      # Main effect parameters (vector parameters)
-      rhatValueThetaLinear, rhatValueThetaNonLinear,
-      # rhatValueXiLinear, rhatValueXiNonLinear,
-      # rhatValueMLinear, rhatValueMNonLinear,
-      
-      # Probability parameters (scalars)
-      rhatValuePiLinear, rhatValuePiNonLinear,
-      rhatValuePiStarLinear, rhatValuePiStarNonLinear,
-      
-      # Interaction coefficients
-      rhatValueAlphaStarLinear, rhatValueAlphaStarNonLinear,
-      
-      # Variance parameters
-      rhatValueTauLinear, rhatValueTauNonLinear,
-      rhatValueTauStarLinear, rhatValueTauStarNonLinear,
-      
-      # Selection parameters
-      # rhatValueGammaLinear, rhatValueGammaNonLinear,
-      # rhatValueGammaStarLinear, rhatValueGammaStarNonLinear,
-      
-      # Interaction Xi Star parameters
-      # rhatValueXiStarLinear, rhatValueXiStarNonLinear,
-      
-      # Model fundamentals
-      rhatValueIntercept, rhatValueSigma
-    )
-    
-    all_rhat <- signif(all_rhat, 3)
-    
-    # 1. Check for NA/NaN values 
-    if (anyNA(all_rhat) || any(is.nan(all_rhat))) {
-      warning("WARNING: NA/NaN values detected in Rhat statistics!")
-      # message("Problematic positions:")
-      # print(which(is.na(all_rhat) | is.nan(all_rhat)))
-    }
-    
-    # 2. Convergence check (Rhat <= 1.1 threshold)
-    threshold <- 1.1  # Standard convergence threshold
-    valid_rhat <- all_rhat[!is.na(all_rhat) & !is.nan(all_rhat)]
-    good_rhat_count <- sum(valid_rhat <= threshold, na.rm = TRUE)
-    total_valid <- length(valid_rhat)
-    
-    if (total_valid == 0) {
-      stop("ERROR: No valid Rhat values available for analysis")
-    }
-    
-    convergence_ratio <- good_rhat_count / total_valid
-    
-    if (convergence_ratio >= 0.90) {
-      message(sprintf(
-        "\u2705 %.1f%% of Rhat values (%d/%d) <= %.2f",
-        convergence_ratio * 100,
-        good_rhat_count,
-        total_valid,
-        threshold
-      ))
+  
+  # Parallel
+  nobs <- length(y)
+  cor_all <- nchain
+  percentage_to_select <- percValidationSet
+  num_to_select <- round(nobs * (percentage_to_select / 100))
+  registerDoParallel(cores = cor_all)
+  registerDoRNG(seed = seed)
+  cat("Starting parallel MCMC with", cor_all, "chains, n =", nobs, "and p =", p, "...")
+  myres <- foreach(k = 1:cor_all) %dorng% {
+    if (PredOutOfSample) {
+      random_sample <- sample(1:nobs, num_to_select)
+      x_train <- x[-random_sample,]
+      y_train <- y[-random_sample]
+      x_val <- x[random_sample,]
+      y_val <- y[random_sample]
     } else {
-      warning(sprintf(
-        "\u274c WARNING: Only %.1f%% of Rhat values (%d/%d) <= %.2f",
-        convergence_ratio * 100,
-        good_rhat_count,
-        total_valid,
-        threshold
-      ))
-      
-      # Show problematic values
-      message("Non-converged parameters (Rhat > ", threshold, "):")
-      print(round(valid_rhat[valid_rhat > threshold], 3))
+      x_val <- NULL
+      y_val <- NULL
     }
+    # Start the MCMC
+    if (is.null(data)) {
+      res0 <- invMCMC(y = y_train, x = x_train, y_val = y_val, x_val = x_val, 
+                      iter = iter, burnin = burnin, 
+                      mht = mht, thin = thin, ha = ha, 
+                      hyperpar = hyperpar, detail = TRUE, pb = FALSE)
+    } else {
+      res0 <- invMCMC(y = y_train, x = x_train, y_val = y_val, x_val = x_val, 
+                      iter = iter, burnin = burnin, 
+                      mht = mht, thin = thin, ha = ha, 
+                      hyperpar = hyperpar, detail = TRUE, pb = FALSE, 
+                      data = data)
+      # ritornare solo quello che ci interessa
+    }
+    return(res0)
+  } # end parallel
+  cat(" Completed!\n\n")
+  
+  # Compute the R-hat statistic
+  # M Star Linear 
+  rhatValueMStarLinear <- rhatIntPar(myres, "m_star_l")
+  # M Star Non Linear 
+  rhatValueMStarNonLinear <- rhatIntPar(myres, "m_star_nl")
+  # Gamma star linear
+  rhatValueGammaStarLinear <- rhatIntPar(myres, "gamma_star_l")
+  # Gamma star Non Linear
+  rhatValueGammaStarNonLinear <- rhatIntPar(myres, "gamma_star_nl")
+  # Theta Linear
+  rhatValueThetaLinear <- rhatMainPar(myres, "theta_l")
+  # Theta Non Linear
+  rhatValueThetaNonLinear <- rhatMainPar(myres, "theta_nl")
+  # Xi Linear
+  rhatValueXiLinear <- rhatMainPar(myres, "xi_l")
+  # Xi Non Linear
+  rhatValueXiNonLinear <- rhatMainPar(myres, "xi_nl")
+  # M linear
+  rhatValueMLinear <- rhatMainPar(myres, "m_l")
+  # M Non Linear
+  rhatValueMNonLinear <- rhatMainPar(myres, "m_nl")
+  # Pi Linear
+  rhatValuePiLinear <- rhatSinglePar(myres, "pi_l")
+  # Pi Non Linear
+  rhatValuePiNonLinear <- rhatSinglePar(myres, "pi_nl")
+  # Gamma linear
+  rhatValueGammaLinear <- rhatMainPar(myres, "gamma_l")
+  # Gamma Non Linear
+  rhatValueGammaNonLinear <- rhatMainPar(myres, "gamma_nl")
+  # Pi Star Linear
+  rhatValuePiStarLinear <- rhatSinglePar(myres, "pi_star_l")
+  # Pi Star Non Linear
+  rhatValuePiStarNonLinear <- rhatSinglePar(myres, "pi_star_nl")
+  # Alpha Star Linear
+  rhatValueAlphaStarLinear <- rhatIntPar(myres, "alpha_star_l")
+  # Alpha Star Non Linear
+  rhatValueAlphaStarNonLinear <- rhatIntPar(myres, "alpha_star_nl")
+  # Tau Linear
+  rhatValueTauLinear <- rhatMainPar(myres, "tau_l")
+  # Tau Non Linear
+  rhatValueTauNonLinear <- rhatMainPar(myres, "tau_nl")
+  # Tau Star Linear
+  rhatValueTauStarLinear <- rhatIntPar(myres, "tau_star_l")
+  # Tau Star Non Linear
+  rhatValueTauStarNonLinear <- rhatIntPar(myres, "tau_star_nl")
+  # Xi Star Linear
+  rhatValueXiStarLinear <- rhatIntPar(myres, "xi_star_l")
+  # Xi Star Non Linear
+  rhatValueXiStarNonLinear <- rhatIntPar(myres, "xi_star_nl")
+  # Intercept
+  rhatValueIntercept <- rhatSinglePar(myres, "intercept")
+  # Model Variance
+  rhatValueSigma <- rhatSinglePar(myres, "sigma")
+  
+  # Collect all Rhat values into a vector
+  all_rhat <- c(
+    # Interaction parameters (matrix/array parameters)
+    # rhatValueMStarLinear, rhatValueMStarNonLinear,
     
-    # 3. Detailed diagnostics report 
-    message("\nRhat Statistics Summary:")
-    print(summary(valid_rhat))
+    # Main effect parameters (vector parameters)
+    rhatValueThetaLinear, rhatValueThetaNonLinear,
+    # rhatValueXiLinear, rhatValueXiNonLinear,
+    # rhatValueMLinear, rhatValueMNonLinear,
     
-    # # Compute the ESS
-    # M Star Linear 
-    ESSValueMStarLinear <- ESSIntPar(myres, "m_star_l")
-    # M Star Non Linear 
-    ESSValueMStarNonLinear <- ESSIntPar(myres, "m_star_nl")
-    # Gamma star linear
-    ESSValueGammaStarLinear <- ESSIntPar(myres, "gamma_star_l")
-    # Gamma star Non Linear
-    ESSValueGammaStarNonLinear <- ESSIntPar(myres, "gamma_star_nl")
-    # Theta Linear
-    ESSValueThetaLinear <- ESSMainPar(myres, "theta_l")
-    # Theta Non Linear
-    ESSValueThetaNonLinear <- ESSMainPar(myres, "theta_nl")
-    # Xi Linear
-    ESSValueXiLinear <- ESSMainPar(myres, "xi_l")
-    # Xi Non Linear
-    ESSValueXiNonLinear <- ESSMainPar(myres, "xi_nl")
-    # M linear
-    ESSValueMLinear <- ESSMainPar(myres, "m_l")
-    # M Non Linear
-    ESSValueMNonLinear <- ESSMainPar(myres, "m_nl")
-    # Pi Linear
-    ESSValuePiLinear <- ESSSinglePar(myres, "pi_l")
-    # # Pi Non Linear
-    ESSValuePiNonLinear <- ESSSinglePar(myres, "pi_nl")
-    # Gamma linear
-    ESSValueGammaLinear <- ESSMainPar(myres, "gamma_l")
-    # Gamma Non Linear
-    ESSValueGammaNonLinear <- ESSMainPar(myres, "gamma_nl")
-    # Pi Star Linear
-    ESSValuePiStarLinear <- ESSSinglePar(myres, "pi_star_l")
-    # # Pi Star Non Linear
-    ESSValuePiStarNonLinear <- ESSSinglePar(myres, "pi_star_nl")
-    # Alpha Star Linear
-    ESSValueAlphaStarLinear <- ESSIntPar(myres, "alpha_star_l")
-    # Alpha Star Non Linear
-    ESSValueAlphaStarNonLinear <- ESSIntPar(myres, "alpha_star_nl")
-    # Tau Linear
-    ESSValueTauLinear <- ESSMainPar(myres, "tau_l")
-    # Tau Non Linear
-    ESSValueTauNonLinear <- ESSMainPar(myres, "tau_nl")
-    # Tau Star Linear
-    ESSValueTauStarLinear <- ESSIntPar(myres, "tau_star_l")
-    # Tau Star Non Linear
-    ESSValueTauStarNonLinear <- ESSIntPar(myres, "tau_star_nl")
-    # Xi Star Linear
-    ESSValueXiStarLinear <- ESSIntPar(myres, "xi_star_l")
-    # Xi Star Non Linear
-    ESSValueXiStarNonLinear <- ESSIntPar(myres, "xi_star_nl")
-    # Intercept
-    ESSValueIntercept <- ESSSinglePar(myres, "intercept")
-    # Model Variance
-    ESSValueSigma <- ESSSinglePar(myres, "sigma")
+    # Probability parameters (scalars)
+    rhatValuePiLinear, rhatValuePiNonLinear,
+    rhatValuePiStarLinear, rhatValuePiStarNonLinear,
     
-    # Collect all ESS values into a vector
-    all_ESS <- c(
-      ESSValueThetaLinear, ESSValueThetaNonLinear,
-      ESSValuePiLinear, ESSValuePiNonLinear,
-      ESSValuePiStarLinear, ESSValuePiStarNonLinear,
-      ESSValueAlphaStarLinear, ESSValueAlphaStarNonLinear,
-      ESSValueTauLinear, ESSValueTauNonLinear,
-      ESSValueTauStarLinear, ESSValueTauStarNonLinear,
-      ESSValueIntercept, ESSValueSigma
-    )
+    # Interaction coefficients
+    rhatValueAlphaStarLinear, rhatValueAlphaStarNonLinear,
     
-    # ESS Statistics
-    ess_mean <- mean(all_ESS, na.rm = TRUE)
-    ess_min <- min(all_ESS, na.rm = TRUE)
-    ess_above_100 <- sum(all_ESS >= 100, na.rm = TRUE)
-    ess_below_100 <- sum(all_ESS < 100 & all_ESS >= 50, na.rm = TRUE)
-    ess_critical <- sum(all_ESS < 50, na.rm = TRUE)
-    total_params <- length(all_ESS)
+    # Variance parameters
+    rhatValueTauLinear, rhatValueTauNonLinear,
+    rhatValueTauStarLinear, rhatValueTauStarNonLinear,
     
-    GREEN <- "\033[32m"
-    YELLOW <- "\033[33m"
-    RED <- "\033[31m"
-    RESET <- "\033[0m"
+    # Selection parameters
+    # rhatValueGammaLinear, rhatValueGammaNonLinear,
+    # rhatValueGammaStarLinear, rhatValueGammaStarNonLinear,
     
-    # Message
-    report <- paste0(
-      "\n\n",
-      "══════════════════ Effective Sample Size Report ══════════════════\n",
-      "  \u2022 Mean ESS: ", round(ess_mean, 1), 
-      ifelse(ess_mean >= 500, paste0(GREEN, " \u2714 Excellent", RESET),
-             ifelse(ess_mean >= 200, paste0(GREEN, " \u2714 Good", RESET),
-                    ifelse(ess_mean >= 100, paste0(YELLOW, " \u26A0 Acceptable", RESET),
-                           paste0(RED, " \u274c Critical", RESET)))),
-      "\n",
-      "  \u2022 Min ESS: ", round(ess_min, 1), 
-      ifelse(ess_min >= 100, paste0(GREEN, " \u2714", RESET),
-             paste0(RED, " \u274c", RESET)),
-      "\n",
-      "  \u2022 Parameters distribution:\n",
-      "    ", GREEN, sprintf("\u25CF %2.0f%%", 100*ess_above_100/total_params), 
-      " (", ess_above_100, ") ≥ 100 - Good\n", RESET,
-      "    ", YELLOW, sprintf("\u25CF %2.0f%%", 100*ess_below_100/total_params),
-      " (", ess_below_100, ") 50-99 - Monitor\n", RESET,
-      "    ", RED, sprintf("\u25CF %2.0f%%", 100*ess_critical/total_params),
-      " (", ess_critical, ") < 50 - Needs action\n", RESET,
-      "══════════════════════════════════════════════════════════════\n",
-      "Recommendations:\n",
-      if(ess_critical > 0) paste0(RED, "  \u26A0 Increase iterations for ", 
-                                  ess_critical, " critical parameters\n", RESET),
-      if(ess_below_100 > 0) paste0(YELLOW, "  \u26A0 Consider longer chains for ", 
-                                   ess_below_100, " parameters\n", RESET),
-      GREEN, "  \u2714 ", ess_above_100, " parameters have sufficient ESS\n", RESET
-    )
+    # Interaction Xi Star parameters
+    # rhatValueXiStarLinear, rhatValueXiStarNonLinear,
     
-    cat(report)
+    # Model fundamentals
+    rhatValueIntercept, rhatValueSigma
+  )
+  
+  all_rhat <- signif(all_rhat, 3)
+  
+  # 1. Check for NA/NaN values 
+  if (anyNA(all_rhat) || any(is.nan(all_rhat))) {
+    warning("WARNING: NA/NaN values detected in Rhat statistics!")
+    # message("Problematic positions:")
+    # print(which(is.na(all_rhat) | is.nan(all_rhat)))
+  }
+  
+  # 2. Convergence check (Rhat <= 1.1 threshold)
+  threshold <- 1.1  # Standard convergence threshold
+  valid_rhat <- all_rhat[!is.na(all_rhat) & !is.nan(all_rhat)]
+  good_rhat_count <- sum(valid_rhat <= threshold, na.rm = TRUE)
+  total_valid <- length(valid_rhat)
+  
+  if (total_valid == 0) {
+    stop("ERROR: No valid Rhat values available for analysis")
+  }
+  
+  convergence_ratio <- good_rhat_count / total_valid
+  
+  if (convergence_ratio >= 0.90) {
+    message(sprintf(
+      "\u2705 %.1f%% of Rhat values (%d/%d) <= %.2f",
+      convergence_ratio * 100,
+      good_rhat_count,
+      total_valid,
+      threshold
+    ))
+  } else {
+    warning(sprintf(
+      "\u274c WARNING: Only %.1f%% of Rhat values (%d/%d) <= %.2f",
+      convergence_ratio * 100,
+      good_rhat_count,
+      total_valid,
+      threshold
+    ))
     
-  } # end check cores
+    # Show problematic values
+    message("Non-converged parameters (Rhat > ", threshold, "):")
+    print(round(valid_rhat[valid_rhat > threshold], 3))
+  }
+  
+  # 3. Detailed diagnostics report 
+  message("\nRhat Statistics Summary:")
+  print(summary(valid_rhat))
+  
+  # # Compute the ESS
+  # M Star Linear 
+  ESSValueMStarLinear <- ESSIntPar(myres, "m_star_l")
+  # M Star Non Linear 
+  ESSValueMStarNonLinear <- ESSIntPar(myres, "m_star_nl")
+  # Gamma star linear
+  ESSValueGammaStarLinear <- ESSIntPar(myres, "gamma_star_l")
+  # Gamma star Non Linear
+  ESSValueGammaStarNonLinear <- ESSIntPar(myres, "gamma_star_nl")
+  # Theta Linear
+  ESSValueThetaLinear <- ESSMainPar(myres, "theta_l")
+  # Theta Non Linear
+  ESSValueThetaNonLinear <- ESSMainPar(myres, "theta_nl")
+  # Xi Linear
+  ESSValueXiLinear <- ESSMainPar(myres, "xi_l")
+  # Xi Non Linear
+  ESSValueXiNonLinear <- ESSMainPar(myres, "xi_nl")
+  # M linear
+  ESSValueMLinear <- ESSMainPar(myres, "m_l")
+  # M Non Linear
+  ESSValueMNonLinear <- ESSMainPar(myres, "m_nl")
+  # Pi Linear
+  ESSValuePiLinear <- ESSSinglePar(myres, "pi_l")
+  # # Pi Non Linear
+  ESSValuePiNonLinear <- ESSSinglePar(myres, "pi_nl")
+  # Gamma linear
+  ESSValueGammaLinear <- ESSMainPar(myres, "gamma_l")
+  # Gamma Non Linear
+  ESSValueGammaNonLinear <- ESSMainPar(myres, "gamma_nl")
+  # Pi Star Linear
+  ESSValuePiStarLinear <- ESSSinglePar(myres, "pi_star_l")
+  # # Pi Star Non Linear
+  ESSValuePiStarNonLinear <- ESSSinglePar(myres, "pi_star_nl")
+  # Alpha Star Linear
+  ESSValueAlphaStarLinear <- ESSIntPar(myres, "alpha_star_l")
+  # Alpha Star Non Linear
+  ESSValueAlphaStarNonLinear <- ESSIntPar(myres, "alpha_star_nl")
+  # Tau Linear
+  ESSValueTauLinear <- ESSMainPar(myres, "tau_l")
+  # Tau Non Linear
+  ESSValueTauNonLinear <- ESSMainPar(myres, "tau_nl")
+  # Tau Star Linear
+  ESSValueTauStarLinear <- ESSIntPar(myres, "tau_star_l")
+  # Tau Star Non Linear
+  ESSValueTauStarNonLinear <- ESSIntPar(myres, "tau_star_nl")
+  # Xi Star Linear
+  ESSValueXiStarLinear <- ESSIntPar(myres, "xi_star_l")
+  # Xi Star Non Linear
+  ESSValueXiStarNonLinear <- ESSIntPar(myres, "xi_star_nl")
+  # Intercept
+  ESSValueIntercept <- ESSSinglePar(myres, "intercept")
+  # Model Variance
+  ESSValueSigma <- ESSSinglePar(myres, "sigma")
+  
+  # Collect all ESS values into a vector
+  all_ESS <- c(
+    ESSValueThetaLinear, ESSValueThetaNonLinear,
+    ESSValuePiLinear, ESSValuePiNonLinear,
+    ESSValuePiStarLinear, ESSValuePiStarNonLinear,
+    ESSValueAlphaStarLinear, ESSValueAlphaStarNonLinear,
+    ESSValueTauLinear, ESSValueTauNonLinear,
+    ESSValueTauStarLinear, ESSValueTauStarNonLinear,
+    ESSValueIntercept, ESSValueSigma
+  )
+  
+  # ESS Statistics
+  ess_mean <- mean(all_ESS, na.rm = TRUE)
+  ess_min <- min(all_ESS, na.rm = TRUE)
+  ess_above_100 <- sum(all_ESS >= 100, na.rm = TRUE)
+  ess_below_100 <- sum(all_ESS < 100 & all_ESS >= 50, na.rm = TRUE)
+  ess_critical <- sum(all_ESS < 50, na.rm = TRUE)
+  total_params <- length(all_ESS)
+  
+  GREEN <- "\033[32m"
+  YELLOW <- "\033[33m"
+  RED <- "\033[31m"
+  RESET <- "\033[0m"
+  
+  # Message
+  report <- paste0(
+    "\n\n",
+    "══════════════════ Effective Sample Size Report ══════════════════\n",
+    "  \u2022 Mean ESS: ", round(ess_mean, 1), 
+    ifelse(ess_mean >= 500, paste0(GREEN, " \u2714 Excellent", RESET),
+           ifelse(ess_mean >= 200, paste0(GREEN, " \u2714 Good", RESET),
+                  ifelse(ess_mean >= 100, paste0(YELLOW, " \u26A0 Acceptable", RESET),
+                         paste0(RED, " \u274c Critical", RESET)))),
+    "\n",
+    "  \u2022 Min ESS: ", round(ess_min, 1), 
+    ifelse(ess_min >= 100, paste0(GREEN, " \u2714", RESET),
+           paste0(RED, " \u274c", RESET)),
+    "\n",
+    "  \u2022 Parameters distribution:\n",
+    "    ", GREEN, sprintf("\u25CF %2.0f%%", 100*ess_above_100/total_params), 
+    " (", ess_above_100, ") ≥ 100 - Good\n", RESET,
+    "    ", YELLOW, sprintf("\u25CF %2.0f%%", 100*ess_below_100/total_params),
+    " (", ess_below_100, ") 50-99 - Monitor\n", RESET,
+    "    ", RED, sprintf("\u25CF %2.0f%%", 100*ess_critical/total_params),
+    " (", ess_critical, ") < 50 - Needs action\n", RESET,
+    "══════════════════════════════════════════════════════════════\n",
+    "Recommendations:\n",
+    if(ess_critical > 0) paste0(RED, "  \u26A0 Increase iterations for ", 
+                                ess_critical, " critical parameters\n", RESET),
+    if(ess_below_100 > 0) paste0(YELLOW, "  \u26A0 Consider longer chains for ", 
+                                 ess_below_100, " parameters\n", RESET),
+    GREEN, "  \u2714 ", ess_above_100, " parameters have sufficient ESS\n", RESET
+  )
+  
+  cat(report)
   
   return(myres)
 }
