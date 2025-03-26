@@ -25,7 +25,7 @@ This file contains the documentation for the R package INVENT. The documentation
 
 * **Chapter 3**: Presents a practical application on a real dataset.
 
-## How to Install the Package and First use
+## How to Install the Package
 
 First, if you haven’t already installed the devtools package, you can do so using the command in line 1. Once installed, you can proceed to install the `INVENT` package directly from my GitHub repository using the command in line 2.
 
