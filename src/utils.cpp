@@ -457,7 +457,8 @@ Rcpp::List bodyMCMC(arma::vec y, int p, int nobs, arma::vec cd, arma::vec d, arm
     std::cout << "Look at the thin value, it must be greater than 0" << "\n";
   }
   // Time 
-  auto start = chrono::high_resolution_clock::now();
+  // auto start = chrono::high_resolution_clock::now();
+  auto start = std::chrono::steady_clock::now();
   ////////////////////////////////////////////////////
   ////////////////// Initial value //////////////////
   ///////////////////////////////////////////////////
@@ -1447,7 +1448,8 @@ Rcpp::List bodyMCMC(arma::vec y, int p, int nobs, arma::vec cd, arma::vec d, arm
   //////////////////// End MCMC //////////////////////
   ///////////////////////////////////////////////////
   // Time 
-  auto stop = std::chrono::high_resolution_clock::now();
+  // auto stop = std::chrono::high_resolution_clock::now();
+  auto stop = std::chrono::steady_clock::now(); 
   auto duration = std::chrono::duration_cast<std::chrono::microseconds>(stop - start).count();
   // mean no detail
   gamma_l_m = gamma_l_m/nout;

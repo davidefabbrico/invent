@@ -408,6 +408,303 @@ mppi_plot <- function(resultMCMC) {
 }
 
 
-# Non-Linear Interaction Plot
+# Main and Interaction Effects (Linear/Non-Linear)
+#' @export
+plotEffectResponse <- function(imod, idx, type = "linear", effect = "main") {
+  X_l <- imod$X_lin
+  X_nl <- imod$X_nl
+  ngf <- dim(X_nl)[1]
+  d <- c(imod$d)
+  pL <- dim(X_l)[2]
+  pNL <- dim(X_l)[2]-1 # da cambiare a seconda di quante discrete si hanno
+  cd <- c(0, cumsum(d))
+  q <- sum(d)
+  ones <- matrix(1, nrow = ngf, ncol = 1)
+  resp <- matrix(0, nrow = ngf, ncol = length(imod$omega_l))
+  if (length(idx) == 2) {
+    idx1 <- idx[1]
+    idx2 <- idx[2]
+  }
+  # Warnings
+  if (length(idx) == 1 && effect == "main") {
+    message("Plotting main effect for variable: ", idx)
+    
+  } else if (length(idx) == 2 && effect == "interaction") {
+    message("Plotting interaction effect between: ", 
+            paste0(idx1, " and ", idx2))
+    
+  } else {
+    if (effect == "main") {
+      stop("Main effect requires exactly 1 index. Received: ", length(idx))
+    } else if (effect == "interaction") {
+      stop("Interaction effect requires exactly 2 indices. Received: ", length(idx))
+    } else {
+      stop("Invalid effect type: ", effect, ". Must be 'main' or 'interaction'")
+    }
+  }
+  for (t in 1:length(imod$omega_l)) {
+    # omega linear and nonlinear
+    omega_l <- imod$omega_l[[t]]
+    omega_nl <- imod$omega_nl[[t]]
+    # main linear and non linear effects
+    theta_l <- imod$theta_l[t,]
+    theta_nl <- imod$theta_nl[t,]
+    # inizialize xi linear and xi non linear
+    xi_l <- imod$xi_l[t,]
+    xi_nl <- imod$xi_nl[t,]
+    resp[,t] <- imod$intercept[t]*ones
+    # Main effect Linear
+    for (j in 1:pL) {
+      if (type == "linear" & effect == "main") {
+        if (j == idx) {
+          resp[,t] <- resp[,t] + matrix(X_l[,j])*theta_l[j]*xi_l[j]
+        } else {
+          resp[,t] <- resp[,t] + median(matrix(X_l[,j])*theta_l[j]*xi_l[j])
+        }
+      } else {
+        resp[,t] <- resp[,t] + median(matrix(X_l[,j])*theta_l[j]*xi_l[j])
+      }
+    }
+    # Main effect NonLinear
+    for (j in 1:pNL) {
+      if (type == "nonlinear" & effect == "main") {
+        if (j == idx) {
+          resp[,t] <- resp[,t] + rowSums(X_nl[,(cd[j]+1):(cd[j+1])]*(as.matrix(theta_nl[j]*ones)%*%as.matrix(t(xi_nl[(cd[j]+1):(cd[j+1])]))))
+        } else {
+          resp[,t] <- resp[,t] + median(rowSums(X_nl[,(cd[j]+1):(cd[j+1])]*(as.matrix(theta_nl[j]*ones)%*%as.matrix(t(xi_nl[(cd[j]+1):(cd[j+1])])))))
+        }
+      } else {
+        resp[,t] <- resp[,t] + median(rowSums(X_nl[,(cd[j]+1):(cd[j+1])]*(as.matrix(theta_nl[j]*ones)%*%as.matrix(t(xi_nl[(cd[j]+1):(cd[j+1])])))))
+      }
+    }
+    # Interaction effect Linear
+    for (j in 1:(p-1)) {
+      for (k in (j+1):p) {
+        # linear
+        if (type == "linear" & effect == "interaction") {
+          if (j == idx1 & k == idx2) {
+            resp[,t] <- resp[,t] + matrix(X_l[,j])*matrix(X_l[,k])*omega_l[j,k]*xi_l[j]
+          } else {
+            resp[,t] <- resp[,t] + median(matrix(X_l[,j])*matrix(X_l[,k])*omega_l[j,k]*xi_l[j])
+          }
+        } else {
+          resp[,t] <- resp[,t] + median(matrix(X_l[,j])*matrix(X_l[,k])*omega_l[j,k]*xi_l[j])
+        }
+      }
+    }
+    # Interaction effect NonLinear
+    for (j in 1:(pNL-1)) {
+      for (k in (j+1):pNL) {
+        # nonlinear
+        if (type == "nonlinear" & effect == "interaction") {
+          if (j == idx1 & k == idx2) {
+            resp[,t] <- resp[,t] + rowSums(X_nl[,(cd[j]+1):(cd[j+1])]*(X_nl[,(cd[k]+1):(cd[k+1])]%*%as.matrix(omega_nl[j, (cd[k]+1):(cd[k+1])]))%*%as.matrix(t(xi_nl[(cd[j]+1):(cd[j+1])])))
+          } else {
+            resp[,t] <- resp[,t] + median(rowSums(X_nl[,(cd[j]+1):(cd[j+1])]*(X_nl[,(cd[k]+1):(cd[k+1])]%*%as.matrix(omega_nl[j, (cd[k]+1):(cd[k+1])]))%*%as.matrix(t(xi_nl[(cd[j]+1):(cd[j+1])]))))
+          }
+        } else {
+          resp[,t] <- resp[,t] + median(rowSums(X_nl[,(cd[j]+1):(cd[j+1])]*(X_nl[,(cd[k]+1):(cd[k+1])]%*%as.matrix(omega_nl[j, (cd[k]+1):(cd[k+1])]))%*%as.matrix(t(xi_nl[(cd[j]+1):(cd[j+1])]))))
+        }
+      }
+    }
+  }
+  # PLOT
+  if (effect == "main") {
+    xj <- X_l[, idx]
+    y_median <- apply(resp, 1, median)
+    y_low <- apply(resp, 1, function(x) quantile(x, 0.025))
+    y_up <- apply(resp, 1, function(x) quantile(x, 0.975))
+    df_smooth <- data.frame(
+      xj = xj,
+      yx = predict(smooth.spline(xj, y_median, spar = 0.7), x = xj)$y,
+      yx_low = predict(smooth.spline(xj, y_low, spar = 0.7), x = xj)$y,
+      yx_up = predict(smooth.spline(xj, y_up, spar = 0.7), x = xj)$y
+    )
+    plotRend <- ggplot(df_smooth, aes(x = xj)) +
+      geom_ribbon(aes(ymin = y_low, ymax = y_up), 
+                  fill = "black", 
+                  alpha = 0.2,   
+                  color = NA) +  
+      geom_line(aes(y = yx),
+                color = "black", 
+                linewidth = 0.8,     
+                alpha = 0.9) +  
+      geom_rug(
+        data = data.frame(x_observed = xj),
+        aes(x = x_observed),
+        sides = "b",
+        color = "black",  
+        alpha = 0.3,
+        inherit.aes = FALSE
+      ) +
+      ylab("Response") + 
+      xlab("Covariate") + 
+      theme_minimal() +
+      theme(
+        panel.grid.major = element_line(color = "grey90"),
+        panel.grid.minor = element_blank()
+      )
+    print(plotRend) 
+  } else {
+    y_median <- apply(resp, 1, median)
+    y_low <- apply(resp, 1, function(x) quantile(x, 0.025))
+    y_up <- apply(resp, 1, function(x) quantile(x, 0.975))
+    xj <- X_l[, idx1]
+    xk <- X_l[, idx2]
+    nx <- 50
+    ny <- 50
+    xo <- seq(min(xj), max(xj), length.out = nx)
+    yo <- seq(min(xk), max(xk), length.out = ny)
+    interp_safe <- function(x, y, z) {
+      tryCatch({
+        interp(x = x, y = y, z = z, 
+               xo = xo, yo = yo,
+               duplicate = "mean",
+               linear = TRUE,
+               extrap = FALSE)$z
+      }, error = function(e) {
+        matrix(NA, nrow = nx, ncol = ny)
+      })
+    }
+    z_median <- interp_safe(xj, xk, y_median)
+    z_low <- interp_safe(xj, xk, y_low)
+    z_up <- interp_safe(xj, xk, y_up)
+    stopifnot(
+      all(dim(z_median) == c(nx, ny)),
+      all(dim(z_low) == c(nx, ny)),
+      all(dim(z_up) == c(nx, ny))
+    )
+    grid <- mesh(xo, yo)
+    gray_palette <- colorRampPalette(c("#F0F0F0", "#303030"))(100)
+    rug_color <- "#0000004D"  
+    line_color <- "#000000E6" 
+    grid_color <- "grey90"
+    surf3D(
+      x = grid$x, 
+      y = grid$y,
+      z = z_median,
+      col = gray_palette,
+      colkey = FALSE,  # Disabilita completamente la legenda
+      lighting = FALSE,
+      shade = 0.1,
+      theta = 30,
+      phi = 20,
+      bty = "b2",
+      ticktype = "detailed",
+      xlab = "", # paste0("x", idx1),
+      ylab = "", # paste0("x", idx2),
+      zlab = "", # "Median Response",
+      zlim = range(z_median, na.rm = TRUE),
+      resfac = 1,
+      border = NA,
+      facets = TRUE,
+      col.grid = grid_color,
+      axes = TRUE,
+      box = TRUE,
+      rasterImage = TRUE,
+      cex.axis = 0.6,
+      cex.lab = 1
+    )
+  }
+  return(NULL)
+}
 
+
+# Covariate effect on Beta regression coefficient (Linear/Non-Linear)
+#' @export
+plotEffectBeta <- function(imod, idx, modifier, type = "linear") {
+  X_l <- imod$X_lin
+  X_nl <- imod$X_nl
+  ngf <- dim(X_nl)[1]
+  d <- c(imod$d)
+  pL <- dim(X_l)[2]
+  pNL <- dim(X_l)[2]-1 # da cambiare a seconda di quante discrete si hanno
+  cd <- c(0, cumsum(d))
+  q <- sum(d)
+  ones <- matrix(1, nrow = ngf, ncol = 1)
+  Beta_LinearIdx <- matrix(0, nrow = ngf, ncol = length(imod$omega_l))
+  Beta_NonLinearIdx <- matrix(0, nrow = ngf, ncol = length(imod$omega_l))
+  for (t in 1:length(imod$omega_l)) {
+    # omega linear and nonlinear
+    omega_l <- imod$omega_l[[t]]
+    omega_nl <- imod$omega_nl[[t]]
+    # main linear and non linear effects
+    theta_l <- imod$theta_l[t,]
+    theta_nl <- imod$theta_nl[t,]
+    # inizialize xi linear and xi non linear
+    xi_l <- imod$xi_l[t,]
+    xi_nl <- imod$xi_nl[t,]
+    if (type == "linear") {
+      Beta_LinearIdx[,t] <- theta_l[idx]*ones*xi_l[idx]
+      if (idx != pL) {
+        for (k in (idx+1):pL) {
+          if (k == modifier) {
+            Beta_LinearIdx[,t] <- Beta_LinearIdx[,t] + X_l[,k]*omega_l[idx,k]*xi_l[idx]
+          } else {
+            Beta_LinearIdx[,t] <- Beta_LinearIdx[,t] + median(X_l[,k]*omega_l[idx,k]*xi_l[idx])
+          }
+        }
+      }
+    } else {
+      Beta_NonLinearIdx[,t] <- median(rowSums(theta_nl[idx]*ones%*%as.matrix(t(xi_nl[(cd[idx]+1):(cd[idx+1])]))))
+      if (idx != pNL) {
+        for (k in (idx+1):pNL) {
+          if (k == modifier) {
+            Beta_NonLinearIdx[,t] <- Beta_NonLinearIdx[,t] + rowSums(X_nl[,(cd[k]+1):(cd[k+1])]%*%as.matrix(omega_nl[idx, (cd[k]+1):(cd[k+1])])%*%as.matrix(t(xi_nl[(cd[idx]+1):(cd[idx+1])])))
+          } else {
+            Beta_NonLinearIdx[,t] <- Beta_NonLinearIdx[,t] + median(rowSums(X_nl[,(cd[k]+1):(cd[k+1])]%*%as.matrix(omega_nl[idx, (cd[k]+1):(cd[k+1])])%*%as.matrix(t(xi_nl[(cd[idx]+1):(cd[idx+1])]))))
+          }
+        } 
+      }
+    }
+  }
+  xj <- X_l[, modifier]
+  if (type == "linear") {
+    betaLin_median <- apply(Beta_LinearIdx, 1, median)
+    betaLin_low <- apply(Beta_LinearIdx, 1, function(x) quantile(x, 0.025))
+    betaLin_up <- apply(Beta_LinearIdx, 1, function(x) quantile(x, 0.975))
+    df_smooth <- data.frame(
+      xj = xj,
+      beta = predict(smooth.spline(xj, betaLin_median, spar = 0.7), x = xj)$y,
+      beta_low = predict(smooth.spline(xj, betaLin_low, spar = 0.7), x = xj)$y,
+      beta_up = predict(smooth.spline(xj, betaLin_up, spar = 0.7), x = xj)$y
+    )
+  } else {
+    betaNLin_median <- apply(Beta_NonLinearIdx, 1, median)
+    betaNLin_low <- apply(Beta_NonLinearIdx, 1, function(x) quantile(x, 0.025))
+    betaNLin_up <- apply(Beta_NonLinearIdx, 1, function(x) quantile(x, 0.975))
+    df_smooth <- data.frame(
+      xj = xj,
+      beta = predict(smooth.spline(xj, betaNLin_median, spar = 0.7), x = xj)$y,
+      beta_low = predict(smooth.spline(xj, betaNLin_low, spar = 0.7), x = xj)$y,
+      beta_up = predict(smooth.spline(xj, betaNLin_up, spar = 0.7), x = xj)$y
+    )
+  }
+  plotRend <- ggplot(df_smooth, aes(x = xj)) +
+    geom_ribbon(aes(ymin = beta_low, ymax = beta_up), 
+                fill = "black", 
+                alpha = 0.2,   
+                color = NA) +  
+    geom_line(aes(y = beta),
+              color = "black", 
+              linewidth = 0.8,     
+              alpha = 0.9) +  
+    geom_rug(
+      data = data.frame(x_observed = xj),
+      aes(x = x_observed),
+      sides = "b",
+      color = "black",  
+      alpha = 0.3,
+      inherit.aes = FALSE
+    ) +
+    ylab(paste0("beta", idx)) + 
+    xlab(paste0("x", modifier)) + 
+    theme_minimal() +
+    theme(
+      panel.grid.major = element_line(color = "grey90"),
+      panel.grid.minor = element_blank()
+    )
+  print(plotRend) 
+  return(plotRend)
+}
 
