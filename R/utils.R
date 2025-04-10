@@ -410,15 +410,17 @@ mppi_plot <- function(resultMCMC) {
 
 # Main and Interaction Effects (Linear/Non-Linear)
 #' @export
-plotEffectResponse <- function(imod, idx, type = "linear", effect = "main") {
+plotEffectResponse <- function(imod, idx, type = "linear", effect = "main",
+                               azimut = 30, polar = 20) {
   X_l <- imod$X_lin
   X_nl <- imod$X_nl
   ngf <- dim(X_nl)[1]
   d <- c(imod$d)
   pL <- dim(X_l)[2]
-  pNL <- dim(X_l)[2]-1 # da cambiare a seconda di quante discrete si hanno
+  pNL <- length(d)
   cd <- c(0, cumsum(d))
   q <- sum(d)
+  nout <- length(imod$intercept)
   ones <- matrix(1, nrow = ngf, ncol = 1)
   resp <- matrix(0, nrow = ngf, ncol = length(imod$omega_l))
   if (length(idx) == 2) {
@@ -442,6 +444,70 @@ plotEffectResponse <- function(imod, idx, type = "linear", effect = "main") {
       stop("Invalid effect type: ", effect, ". Must be 'main' or 'interaction'")
     }
   }
+  # check MPPI
+  if (effect == "main" & type == "linear") {
+    cat("Linear Main Effects (MPPI >= 0.5):\n")
+    mppi_linear <- colMeans(imod$gamma_l)
+    sig_linear <- which(mppi_linear >= 0.5)
+    if(length(sig_linear) > 0) {
+      for(j in sig_linear) {
+        cat("-", j, ":", round(mppi_linear[j], 2), "\n")
+      }
+    } else {
+      stop("None found\n")
+    }
+  }
+  
+  if (effect == "main" & type == "nonlinear") {
+    cat("\nNon-Linear Main Effects (MPPI >= 0.5):\n")
+    mppi_nonlinear <- colMeans(imod$gamma_nl)
+    sig_nonlinear <- which(mppi_nonlinear >= 0.5)
+    if(length(sig_nonlinear) > 0) {
+      for(j in sig_nonlinear) {
+        cat("-", j, ":", round(mppi_nonlinear[j], 2), "\n")
+      }
+    } else {
+      stop("None found\n")
+    }
+  }
+  
+  if (effect == "interaction" & type == "linear") {
+    gammaStarLin <- array(unlist(imod$gamma_star_l), dim = c(pL, pL, nout))
+    mppi_IntLinear <- apply(gammaStarLin, c(1,2), mean)
+    var_names <- colnames(imod$X_lin) %||% paste0("V", 1:pL)
+    cat("\nLinear Interaction Effects (MPPI >= 0.5):\n")
+    sig_interactions <- which(mppi_IntLinear >= 0.5 & upper.tri(mppi_IntLinear), arr.ind = TRUE)
+    if(nrow(sig_interactions) > 0) {
+      for(i in 1:nrow(sig_interactions)) {
+        row_idx <- sig_interactions[i, 1]
+        col_idx <- sig_interactions[i, 2]
+        cat("-", var_names[row_idx], "x", var_names[col_idx], 
+            ":", round(mppi_IntLinear[row_idx, col_idx], 2), "\n")
+      }
+    } else {
+      stop("No significant Linear interactions found\n")
+    }
+
+  }
+  
+  if (effect == "interaction" & type == "nonlinear") {
+    gammaStarNLin <- array(unlist(imod$gamma_star_nl), dim = c(pNL, pNL, nout))
+    mppi_IntNLinear <- apply(gammaStarNLin, c(1,2), mean)
+    var_names <- colnames(imod$X_nl) %||% paste0("V", 1:pNL)
+    cat("\nNon-Linear Interaction Effects (MPPI >= 0.5):\n")
+    sig_interactions <- which(mppi_IntNLinear >= 0.5 & upper.tri(mppi_IntNLinear), arr.ind = TRUE)
+    if(nrow(sig_interactions) > 0) {
+      for(i in 1:nrow(sig_interactions)) {
+        row_idx <- sig_interactions[i, 1]
+        col_idx <- sig_interactions[i, 2]
+        cat("-", var_names[row_idx], "x", var_names[col_idx], 
+            ":", round(mppi_IntNLinear[row_idx, col_idx], 2), "\n")
+      }
+    } else {
+      stop("No significant Non-Linear interactions found\n")
+    }
+  }
+  
   for (t in 1:length(imod$omega_l)) {
     # omega linear and nonlinear
     omega_l <- imod$omega_l[[t]]
@@ -551,8 +617,8 @@ plotEffectResponse <- function(imod, idx, type = "linear", effect = "main") {
     y_up <- apply(resp, 1, function(x) quantile(x, 0.975))
     xj <- X_l[, idx1]
     xk <- X_l[, idx2]
-    nx <- 50
-    ny <- 50
+    nx <- 200
+    ny <- 200
     xo <- seq(min(xj), max(xj), length.out = nx)
     yo <- seq(min(xk), max(xk), length.out = ny)
     interp_safe <- function(x, y, z) {
@@ -560,7 +626,7 @@ plotEffectResponse <- function(imod, idx, type = "linear", effect = "main") {
         interp(x = x, y = y, z = z, 
                xo = xo, yo = yo,
                duplicate = "mean",
-               linear = TRUE,
+               linear = FALSE,
                extrap = FALSE)$z
       }, error = function(e) {
         matrix(NA, nrow = nx, ncol = ny)
@@ -579,6 +645,9 @@ plotEffectResponse <- function(imod, idx, type = "linear", effect = "main") {
     rug_color <- "#0000004D"  
     line_color <- "#000000E6" 
     grid_color <- "grey90"
+    par(mar = c(2, 2, 2, 2),
+        cex.axis = 0.8,     
+        cex.lab = 0.9)
     surf3D(
       x = grid$x, 
       y = grid$y,
@@ -587,8 +656,8 @@ plotEffectResponse <- function(imod, idx, type = "linear", effect = "main") {
       colkey = FALSE,  # Disabilita completamente la legenda
       lighting = FALSE,
       shade = 0.1,
-      theta = 30,
-      phi = 20,
+      theta = azimut,
+      phi = polar,
       bty = "b2",
       ticktype = "detailed",
       xlab = "", # paste0("x", idx1),
@@ -606,7 +675,26 @@ plotEffectResponse <- function(imod, idx, type = "linear", effect = "main") {
       cex.lab = 1
     )
   }
-  return(NULL)
+  if (effect == "main") {
+    return(invisible(list(
+      plot = plotRend,
+      data = df_smooth,
+      variable = idx,
+      effect_type = effect
+    )))
+  } else {
+    return(invisible(list(
+      surface_data = list(
+        x = grid$x,
+        y = grid$y,
+        z_median = z_median,
+        z_low = z_low,
+        z_up = z_up
+      ),
+      variables = c(idx1, idx2),
+      effect_type = effect
+    )))
+  }
 }
 
 
@@ -618,7 +706,7 @@ plotEffectBeta <- function(imod, idx, modifier, type = "linear") {
   ngf <- dim(X_nl)[1]
   d <- c(imod$d)
   pL <- dim(X_l)[2]
-  pNL <- dim(X_l)[2]-1 # da cambiare a seconda di quante discrete si hanno
+  pNL <- length(d) 
   cd <- c(0, cumsum(d))
   q <- sum(d)
   ones <- matrix(1, nrow = ngf, ncol = 1)
