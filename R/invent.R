@@ -29,4 +29,6 @@
 #' @import ggplot2
 #' @import gridExtra
 #' @import doParallel
+#' @import plot3D
+#' @import splines
 NULL
