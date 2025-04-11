@@ -411,6 +411,7 @@ mppi_plot <- function(resultMCMC) {
 # Main and Interaction Effects (Linear/Non-Linear)
 #' @export
 plotEffectResponse <- function(imod, idx, type = "linear", effect = "main",
+                               xtitle = "", ytitle = "", ztitle = "", 
                                azimut = 30, polar = 20) {
   X_l <- imod$X_lin
   X_nl <- imod$X_nl
@@ -451,7 +452,7 @@ plotEffectResponse <- function(imod, idx, type = "linear", effect = "main",
     sig_linear <- which(mppi_linear >= 0.5)
     if(length(sig_linear) > 0) {
       for(j in sig_linear) {
-        cat("-", j, ":", round(mppi_linear[j], 2), "\n")
+        cat("-", "Covariate", j, ":", round(mppi_linear[j], 2), "\n")
       }
     } else {
       stop("None found\n")
@@ -464,7 +465,7 @@ plotEffectResponse <- function(imod, idx, type = "linear", effect = "main",
     sig_nonlinear <- which(mppi_nonlinear >= 0.5)
     if(length(sig_nonlinear) > 0) {
       for(j in sig_nonlinear) {
-        cat("-", j, ":", round(mppi_nonlinear[j], 2), "\n")
+        cat("-", "Covariate", j, ":", round(mppi_nonlinear[j], 2), "\n")
       }
     } else {
       stop("None found\n")
@@ -603,8 +604,8 @@ plotEffectResponse <- function(imod, idx, type = "linear", effect = "main",
         alpha = 0.3,
         inherit.aes = FALSE
       ) +
-      ylab("Response") + 
-      xlab("Covariate") + 
+      ylab(ytitle) + 
+      xlab(xtitle) + 
       theme_minimal() +
       theme(
         panel.grid.major = element_line(color = "grey90"),
@@ -642,8 +643,6 @@ plotEffectResponse <- function(imod, idx, type = "linear", effect = "main",
     )
     grid <- mesh(xo, yo)
     gray_palette <- colorRampPalette(c("#F0F0F0", "#303030"))(100)
-    rug_color <- "#0000004D"  
-    line_color <- "#000000E6" 
     grid_color <- "grey90"
     par(mar = c(2, 2, 2, 2),
         cex.axis = 0.8,     
@@ -653,16 +652,16 @@ plotEffectResponse <- function(imod, idx, type = "linear", effect = "main",
       y = grid$y,
       z = z_median,
       col = gray_palette,
-      colkey = FALSE,  # Disabilita completamente la legenda
-      lighting = FALSE,
+      colkey = FALSE, 
+      lighting = list(ambient = 0.3, diffuse = 0.7, specular = 0.4),
       shade = 0.1,
       theta = azimut,
       phi = polar,
       bty = "b2",
       ticktype = "detailed",
-      xlab = "", # paste0("x", idx1),
-      ylab = "", # paste0("x", idx2),
-      zlab = "", # "Median Response",
+      xlab = xtitle,
+      ylab = ytitle,
+      zlab = ztitle,
       zlim = range(z_median, na.rm = TRUE),
       resfac = 1,
       border = NA,
@@ -673,6 +672,20 @@ plotEffectResponse <- function(imod, idx, type = "linear", effect = "main",
       rasterImage = TRUE,
       cex.axis = 0.6,
       cex.lab = 1
+    )
+    contour3D(
+      x = xo,
+      y = yo,
+      z = z_median,
+      colvar = z_median,
+      add = TRUE,                   
+      col = "black",                
+      lwd = 0.8,                    
+      nlevels = 10,                 
+      drawlabels = TRUE,            
+      labcex = 0.7,                 
+      alpha = 0.7,                  
+      method = "flattest"           
     )
   }
   if (effect == "main") {
@@ -700,7 +713,8 @@ plotEffectResponse <- function(imod, idx, type = "linear", effect = "main",
 
 # Covariate effect on Beta regression coefficient (Linear/Non-Linear)
 #' @export
-plotEffectBeta <- function(imod, idx, modifier, type = "linear") {
+plotEffectBeta <- function(imod, idx, modifier, type = "linear",
+                           xtitle = "", ytitle = "") {
   X_l <- imod$X_lin
   X_nl <- imod$X_nl
   ngf <- dim(X_nl)[1]
@@ -785,8 +799,8 @@ plotEffectBeta <- function(imod, idx, modifier, type = "linear") {
       alpha = 0.3,
       inherit.aes = FALSE
     ) +
-    ylab(paste0("beta", idx)) + 
-    xlab(paste0("x", modifier)) + 
+    ylab(ytitle) + 
+    xlab(xtitle) + 
     theme_minimal() +
     theme(
       panel.grid.major = element_line(color = "grey90"),

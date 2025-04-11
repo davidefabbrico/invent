@@ -327,21 +327,25 @@ rhatSinglePar <- function(myres, stringName = "") {
   return(rhatValue)
 }
 
-rhatMainPar <- function(myres, stringName = "") {
+rhatMainPar <- function(myres, stringName = "", type = "linear") {
   if (stringName == "") {
     stop("Please provide the name of the parameter to compute the R-hat")
   }
   parameterList <- lapply(myres, `[[`, stringName)
+  d <- myres[[1]]$d
+  q <- sum(d)
+  p <- dim(myres[[1]]$X_lin)[2]
+  pNL <- length(d)
   if (stringName == "xi_nl" || stringName == "m_nl") {
-    d <- myres[[1]]$d
-    q <- sum(d)
-    p <- dim(myres[[1]]$X_lin)[2]
     rhatValue <- rep(NA, q)
     for (base in 1:q) {
       parameterMatrix <- sapply(parameterList, function(mat) mat[, base])
       rhatValue[base] <- gelman_rhat(parameterMatrix)
     }
   } else {
+    if (type != "linear") {
+      p <- pNL
+    }
     rhatValue <- rep(NA, p)
     for (cov in 1:p) {
       parameterMatrix <- sapply(parameterList, function(mat) mat[, cov])
@@ -351,24 +355,28 @@ rhatMainPar <- function(myres, stringName = "") {
   return(rhatValue)
 }
 
-rhatIntPar <- function(myres, stringName = "") {
+rhatIntPar <- function(myres, stringName = "", type = "linear") {
   if (stringName == "") {
     stop("Please provide the name of the parameter to compute the R-hat")
   }
   p <- dim(myres[[1]]$X_lin)[2]
   d <- myres[[1]]$d
+  pNL <- length(d)
   cd <- c(0, cumsum(d))
   if (stringName == "xi_star_nl" || stringName == "m_star_nl") {
     rhatValue <- c()
     parameterList <- lapply(myres, `[[`, stringName)
-    for (j in 1:(p-1)) {
-      for (k in (j+1):p) {
+    for (j in 1:(pNL-1)) {
+      for (k in (j+1):pNL) {
         parameterMatrix <- sapply(parameterList, 
                                   function(lst) sapply(lst, function(mat) mat[j, (cd[k]+1):(cd[k+1])]))
         rhatValue <- c(rhatValue, gelman_rhat(parameterMatrix))
       }
     }
   } else {
+    if (type != "linear") {
+      p <- pNL
+    }
     rhatValue <- rep(NA, p*(p-1)/2)
     indComb <- 1
     parameterList <- lapply(myres, `[[`, stringName)
@@ -515,21 +523,25 @@ ESSSinglePar <- function(myres, stringName = "") {
   return(essValue)
 }
 
-ESSMainPar <- function(myres, stringName = "") {
+ESSMainPar <- function(myres, stringName = "", type = "linear") {
   if (stringName == "") {
     stop("Please provide the name of the parameter to compute the R-hat")
   }
   parameterList <- lapply(myres, `[[`, stringName)
+  d <- myres[[1]]$d
+  q <- sum(d)
+  p <- dim(myres[[1]]$X_lin)[2]
+  pNL <- length(d)
   if (stringName == "xi_nl" || stringName == "m_nl") {
-    d <- myres[[1]]$d
-    q <- sum(d)
-    p <- dim(myres[[1]]$X_lin)[2]
     ESSValue <- rep(NA, q)
     for (base in 1:q) {
       parameterMatrix <- sapply(parameterList, function(mat) mat[, base])
       ESSValue[base] <- ESS_multiple_chains(parameterMatrix)$ESS
     }
   } else {
+    if (type != "linear") {
+      p <- pNL
+    }
     ESSValue <- rep(NA, p)
     for (cov in 1:p) {
       parameterMatrix <- sapply(parameterList, function(mat) mat[, cov])
@@ -539,24 +551,28 @@ ESSMainPar <- function(myres, stringName = "") {
   return(ESSValue)
 }
 
-ESSIntPar <- function(myres, stringName = "") {
+ESSIntPar <- function(myres, stringName = "", type = "linear") {
   if (stringName == "") {
     stop("Please provide the name of the parameter to compute the R-hat")
   }
   p <- dim(myres[[1]]$X_lin)[2]
   d <- myres[[1]]$d
   cd <- c(0, cumsum(d))
+  pNL <- length(d)
   if (stringName == "xi_star_nl" || stringName == "m_star_nl") {
     ESSValue <- c()
     parameterList <- lapply(myres, `[[`, stringName)
-    for (j in 1:(p-1)) {
-      for (k in (j+1):p) {
+    for (j in 1:(pNL-1)) {
+      for (k in (j+1):pNL) {
         parameterMatrix <- sapply(parameterList, 
                                   function(lst) sapply(lst, function(mat) mat[j, (cd[k]+1):(cd[k+1])]))
         ESSValue <- c(ESSValue, ESS_multiple_chains(parameterMatrix)$ESS)
       }
     }
   } else {
+    if (type != "linear") {
+      p <- pNL
+    }
     ESSValue <- rep(NA, p*(p-1)/2)
     indComb <- 1
     parameterList <- lapply(myres, `[[`, stringName)
@@ -623,53 +639,53 @@ invParMCMC <- function(y, x, hyperpar = c(3, 1, 1, 1, 0.00025, 0.4, 1.6, 0.2, 1.
     
     # Compute the R-hat statistic
     # M Star Linear 
-    rhatValueMStarLinear <- rhatIntPar(myres, "m_star_l")
+    rhatValueMStarLinear <- rhatIntPar(myres, "m_star_l", type = "linear")
     # M Star Non Linear 
-    rhatValueMStarNonLinear <- rhatIntPar(myres, "m_star_nl")
+    rhatValueMStarNonLinear <- rhatIntPar(myres, "m_star_nl", type = "nonlinear")
     # Gamma star linear
-    rhatValueGammaStarLinear <- rhatIntPar(myres, "gamma_star_l")
+    rhatValueGammaStarLinear <- rhatIntPar(myres, "gamma_star_l", type = "linear")
     # Gamma star Non Linear
-    rhatValueGammaStarNonLinear <- rhatIntPar(myres, "gamma_star_nl")
+    rhatValueGammaStarNonLinear <- rhatIntPar(myres, "gamma_star_nl", type = "nonlinear")
     # Theta Linear
-    rhatValueThetaLinear <- rhatMainPar(myres, "theta_l")
+    rhatValueThetaLinear <- rhatMainPar(myres, "theta_l", type = "linear")
     # Theta Non Linear
-    rhatValueThetaNonLinear <- rhatMainPar(myres, "theta_nl")
+    rhatValueThetaNonLinear <- rhatMainPar(myres, "theta_nl", type = "nonlinear")
     # Xi Linear
-    rhatValueXiLinear <- rhatMainPar(myres, "xi_l")
+    rhatValueXiLinear <- rhatMainPar(myres, "xi_l", type = "linear")
     # Xi Non Linear
-    rhatValueXiNonLinear <- rhatMainPar(myres, "xi_nl")
+    rhatValueXiNonLinear <- rhatMainPar(myres, "xi_nl", type = "nonlinear")
     # M linear
-    rhatValueMLinear <- rhatMainPar(myres, "m_l")
+    rhatValueMLinear <- rhatMainPar(myres, "m_l", type = "linear")
     # M Non Linear
-    rhatValueMNonLinear <- rhatMainPar(myres, "m_nl")
+    rhatValueMNonLinear <- rhatMainPar(myres, "m_nl", type = "nonlinear")
     # Pi Linear
     rhatValuePiLinear <- rhatSinglePar(myres, "pi_l")
     # Pi Non Linear
     rhatValuePiNonLinear <- rhatSinglePar(myres, "pi_nl")
     # Gamma linear
-    rhatValueGammaLinear <- rhatMainPar(myres, "gamma_l")
+    rhatValueGammaLinear <- rhatMainPar(myres, "gamma_l", type = "linear")
     # Gamma Non Linear
-    rhatValueGammaNonLinear <- rhatMainPar(myres, "gamma_nl")
+    rhatValueGammaNonLinear <- rhatMainPar(myres, "gamma_nl", type = "nonlinear")
     # Pi Star Linear
     rhatValuePiStarLinear <- rhatSinglePar(myres, "pi_star_l")
     # Pi Star Non Linear
     rhatValuePiStarNonLinear <- rhatSinglePar(myres, "pi_star_nl")
     # Alpha Star Linear
-    rhatValueAlphaStarLinear <- rhatIntPar(myres, "alpha_star_l")
+    rhatValueAlphaStarLinear <- rhatIntPar(myres, "alpha_star_l", type = "linear")
     # Alpha Star Non Linear
-    rhatValueAlphaStarNonLinear <- rhatIntPar(myres, "alpha_star_nl")
+    rhatValueAlphaStarNonLinear <- rhatIntPar(myres, "alpha_star_nl", type = "nonlinear")
     # Tau Linear
-    rhatValueTauLinear <- rhatMainPar(myres, "tau_l")
+    rhatValueTauLinear <- rhatMainPar(myres, "tau_l", type = "linear")
     # Tau Non Linear
-    rhatValueTauNonLinear <- rhatMainPar(myres, "tau_nl")
+    rhatValueTauNonLinear <- rhatMainPar(myres, "tau_nl", type = "nonlinear")
     # Tau Star Linear
-    rhatValueTauStarLinear <- rhatIntPar(myres, "tau_star_l")
+    rhatValueTauStarLinear <- rhatIntPar(myres, "tau_star_l", type = "linear")
     # Tau Star Non Linear
-    rhatValueTauStarNonLinear <- rhatIntPar(myres, "tau_star_nl")
+    rhatValueTauStarNonLinear <- rhatIntPar(myres, "tau_star_nl", type = "nonlinear")
     # Xi Star Linear
-    rhatValueXiStarLinear <- rhatIntPar(myres, "xi_star_l")
+    rhatValueXiStarLinear <- rhatIntPar(myres, "xi_star_l", type = "linear")
     # Xi Star Non Linear
-    rhatValueXiStarNonLinear <- rhatIntPar(myres, "xi_star_nl")
+    rhatValueXiStarNonLinear <- rhatIntPar(myres, "xi_star_nl", type = "nonlinear")
     # Intercept
     rhatValueIntercept <- rhatSinglePar(myres, "intercept")
     # Model Variance
@@ -678,12 +694,12 @@ invParMCMC <- function(y, x, hyperpar = c(3, 1, 1, 1, 0.00025, 0.4, 1.6, 0.2, 1.
     # Collect all Rhat values into a vector
     all_rhat <- c(
       # Interaction parameters (matrix/array parameters)
-      # rhatValueMStarLinear, rhatValueMStarNonLinear,
+      rhatValueMStarLinear, rhatValueMStarNonLinear,
       
       # Main effect parameters (vector parameters)
       rhatValueThetaLinear, rhatValueThetaNonLinear,
-      # rhatValueXiLinear, rhatValueXiNonLinear,
-      # rhatValueMLinear, rhatValueMNonLinear,
+      rhatValueXiLinear, rhatValueXiNonLinear,
+      rhatValueMLinear, rhatValueMNonLinear,
       
       # Probability parameters (scalars)
       rhatValuePiLinear, rhatValuePiNonLinear,
@@ -701,7 +717,7 @@ invParMCMC <- function(y, x, hyperpar = c(3, 1, 1, 1, 0.00025, 0.4, 1.6, 0.2, 1.
       # rhatValueGammaStarLinear, rhatValueGammaStarNonLinear,
       
       # Interaction Xi Star parameters
-      # rhatValueXiStarLinear, rhatValueXiStarNonLinear,
+      rhatValueXiStarLinear, rhatValueXiStarNonLinear,
       
       # Model fundamentals
       rhatValueIntercept, rhatValueSigma
@@ -756,53 +772,53 @@ invParMCMC <- function(y, x, hyperpar = c(3, 1, 1, 1, 0.00025, 0.4, 1.6, 0.2, 1.
     
     # # Compute the ESS
     # M Star Linear 
-    ESSValueMStarLinear <- ESSIntPar(myres, "m_star_l")
+    ESSValueMStarLinear <- ESSIntPar(myres, "m_star_l", type = "linear")
     # M Star Non Linear 
-    ESSValueMStarNonLinear <- ESSIntPar(myres, "m_star_nl")
+    ESSValueMStarNonLinear <- ESSIntPar(myres, "m_star_nl", type = "nonlinear")
     # Gamma star linear
-    ESSValueGammaStarLinear <- ESSIntPar(myres, "gamma_star_l")
+    ESSValueGammaStarLinear <- ESSIntPar(myres, "gamma_star_l", type = "linear")
     # Gamma star Non Linear
-    ESSValueGammaStarNonLinear <- ESSIntPar(myres, "gamma_star_nl")
+    ESSValueGammaStarNonLinear <- ESSIntPar(myres, "gamma_star_nl", type = "nonlinear")
     # Theta Linear
-    ESSValueThetaLinear <- ESSMainPar(myres, "theta_l")
+    ESSValueThetaLinear <- ESSMainPar(myres, "theta_l", type = "linear")
     # Theta Non Linear
-    ESSValueThetaNonLinear <- ESSMainPar(myres, "theta_nl")
+    ESSValueThetaNonLinear <- ESSMainPar(myres, "theta_nl", type = "nonlinear")
     # Xi Linear
-    ESSValueXiLinear <- ESSMainPar(myres, "xi_l")
+    ESSValueXiLinear <- ESSMainPar(myres, "xi_l", type = "linear")
     # Xi Non Linear
-    ESSValueXiNonLinear <- ESSMainPar(myres, "xi_nl")
+    ESSValueXiNonLinear <- ESSMainPar(myres, "xi_nl", type = "nonlinear")
     # M linear
-    ESSValueMLinear <- ESSMainPar(myres, "m_l")
+    ESSValueMLinear <- ESSMainPar(myres, "m_l", type = "linear")
     # M Non Linear
-    ESSValueMNonLinear <- ESSMainPar(myres, "m_nl")
+    ESSValueMNonLinear <- ESSMainPar(myres, "m_nl", type = "nonlinear")
     # Pi Linear
     ESSValuePiLinear <- ESSSinglePar(myres, "pi_l")
     # # Pi Non Linear
     ESSValuePiNonLinear <- ESSSinglePar(myres, "pi_nl")
     # Gamma linear
-    ESSValueGammaLinear <- ESSMainPar(myres, "gamma_l")
+    ESSValueGammaLinear <- ESSMainPar(myres, "gamma_l", type = "linear")
     # Gamma Non Linear
-    ESSValueGammaNonLinear <- ESSMainPar(myres, "gamma_nl")
+    ESSValueGammaNonLinear <- ESSMainPar(myres, "gamma_nl", type = "nonlinear")
     # Pi Star Linear
     ESSValuePiStarLinear <- ESSSinglePar(myres, "pi_star_l")
     # # Pi Star Non Linear
     ESSValuePiStarNonLinear <- ESSSinglePar(myres, "pi_star_nl")
     # Alpha Star Linear
-    ESSValueAlphaStarLinear <- ESSIntPar(myres, "alpha_star_l")
+    ESSValueAlphaStarLinear <- ESSIntPar(myres, "alpha_star_l", type = "linear")
     # Alpha Star Non Linear
-    ESSValueAlphaStarNonLinear <- ESSIntPar(myres, "alpha_star_nl")
+    ESSValueAlphaStarNonLinear <- ESSIntPar(myres, "alpha_star_nl", type = "nonlinear")
     # Tau Linear
-    ESSValueTauLinear <- ESSMainPar(myres, "tau_l")
+    ESSValueTauLinear <- ESSMainPar(myres, "tau_l", type = "linear")
     # Tau Non Linear
-    ESSValueTauNonLinear <- ESSMainPar(myres, "tau_nl")
+    ESSValueTauNonLinear <- ESSMainPar(myres, "tau_nl", type = "nonlinear")
     # Tau Star Linear
-    ESSValueTauStarLinear <- ESSIntPar(myres, "tau_star_l")
+    ESSValueTauStarLinear <- ESSIntPar(myres, "tau_star_l", type = "linear")
     # Tau Star Non Linear
-    ESSValueTauStarNonLinear <- ESSIntPar(myres, "tau_star_nl")
+    ESSValueTauStarNonLinear <- ESSIntPar(myres, "tau_star_nl", type = "nonlinear")
     # Xi Star Linear
-    ESSValueXiStarLinear <- ESSIntPar(myres, "xi_star_l")
+    ESSValueXiStarLinear <- ESSIntPar(myres, "xi_star_l", type = "linear")
     # Xi Star Non Linear
-    ESSValueXiStarNonLinear <- ESSIntPar(myres, "xi_star_nl")
+    ESSValueXiStarNonLinear <- ESSIntPar(myres, "xi_star_nl", type = "nonlinear")
     # Intercept
     ESSValueIntercept <- ESSSinglePar(myres, "intercept")
     # Model Variance
