@@ -46,11 +46,14 @@ is what `invent::gendata()` and `invent::invMCMC()` do.
 library(invent)
 
 # Generate synthetic data
-data_list <- invent::gendata(n_obs = 200, p = 50, scenario = 4, 
-                              nnnc = 3, ha = 1)
+data_list <- invent::gendata(n_obs = 400, p = 10, scenario = 4)
+
+y <- data_list$Y
+x <- data_list$X
 
 # Run the regression model
-out <- invent::invMCMC(y, x, iter = 10000, burnin = 5000, 
-                      thin = 5, ha = 1, data = data_list, 
-                      detail = FALSE)
+out <- invent::invMCMC(y, x, iter = 10000, burnin = 5000, thin = 5, ha = 2, 
+                       data = data_list, detail = TRUE, pb = TRUE)
 ```
+
+For additional details, please refer to the howtouse (.Rmd or .html) file available in this repository.

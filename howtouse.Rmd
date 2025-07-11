@@ -297,22 +297,53 @@ The `mppi_plot` function creates and returns a combined MPPI plot for different 
 mppi_res <- invent::mppi_plot(out)
 ```
 
-### Association Plot and Varying Coefficients Plot
+
+### Association Plots
+
+The package provides two functions, `plotEffectResponse` and `plotEffectBeta`, which visualize:  
+- the association between the response variable and a given covariate (`plotEffectResponse`),  
+- the effect of a covariate on a subject-specific regression coefficient (`plotEffectBeta`).
+
+Below we illustrate the main functionalities of both functions.
 
 #### Main Effect Association Plot
-```{r, eval=FALSE}
+
+We first plot the linear association between covariate 1 and the response variable:
+
+```{r eval=TRUE}
 plotEffectResponse(out, 1, type = "linear", effect = "main", xtitle = "x", ytitle = "y")
 ```
 
+Note that the model output includes only plots for the effects that have been estimated. In other words, not all covariates are associated with the response through linear or non-linear effects.  
+We now plot the non-linear effect of covariate 1:
+
+```{r eval=TRUE}
+plotEffectResponse(out, 1, type = "nonlinear", effect = "main", xtitle = "x", ytitle = "y")
+```
+
 #### Interaction Effect Association Plot
-```{r, eval=FALSE}
-plotEffectResponse(out, c(1,6), type = "linear", effect = "interaction",
-                   azimut = 60, polar = 20, xtitle = "VO2max", ytitle = "age", ztitle = "BMI")
+
+We can also visualize interaction effects. In this case, the function returns a surface plot showing the joint effect of two covariates on the response.  
+For example, the following command plots the non-linear interaction between covariates 1 and 6:
+
+```{r eval=FALSE}
+plotEffectResponse(out, c(1,6), type = "nonlinear", effect = "interaction",
+                   azimut = 60, polar = 20, xtitle = "x1", ytitle = "x2", ztitle = "y")
 ```
 
 #### Varying Coefficients Plot
-```{r, eval=FALSE}
-plotEffectBeta(imod, 3, 21, type = "linear", xtitle = "age", ytitle = "VO2max")
+
+Since the proposed model performs subject-specific inference, we can also visualize how a covariate influences a varying regression coefficient.  
+Below we plot the effect of covariate 6 on the linear varying coefficient associated with covariate 7:
+
+```{r eval=TRUE}
+plotEffectBeta(out, 6, 7, type = "linear", xtitle = "x", ytitle = "beta")
+```
+
+We now show the non-linear effect of covariate 7 on the varying coefficient associated with covariate 1:
+
+```{r eval=TRUE}
+plotEffectBeta(out, 1, 7, type = "nonlinear", xtitle = "x", ytitle = "beta")
 ```
 
 ---
