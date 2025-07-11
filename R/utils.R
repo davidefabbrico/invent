@@ -811,7 +811,6 @@ plotEffectBeta <- function(imod, idx, modifier, type = "linear",
       panel.grid.major = element_line(color = "grey90"),
       panel.grid.minor = element_blank()
     )
-  print(plotRend) 
   return(plotRend)
 }
 
