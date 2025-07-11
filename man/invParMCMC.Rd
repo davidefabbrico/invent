@@ -12,7 +12,7 @@ invParMCMC(
   PredOutOfSample = TRUE,
   rank = 0.95,
   iter = 10000,
-  burnin = iter/2,
+  burnin = 5000,
   thin = 5,
   ha = 2,
   data = NULL,

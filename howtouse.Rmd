@@ -31,7 +31,7 @@ First, if you haven’t already installed the devtools package, you can do so us
 
 ```{r eval = FALSE}
 # install.packages("devtools")
-devtools::install_github("davidefabbrico/invent")
+devtools::install_github("davidefabbrico/invent", force = TRUE)
 ```
 
 Now that the package is installed, let’s walk through a simple example. We will generate synthetic data and run the model using the invMCMC function.
@@ -53,7 +53,7 @@ x <- data_list$X
 
 # Run the regression model
 out <- invent::invMCMC(y, x, iter = 10000, burnin = 5000, thin = 5, ha = 2, 
-                       data = data_list, detail = TRUE, pb = FALSE)
+                       data = data_list, detail = TRUE, pb = TRUE)
 ```
 
 
@@ -138,8 +138,8 @@ The algorithm uses the following default input parameters:
 out <- invMCMC(y, x, y_val = NULL, x_val = NULL, 
                hyperpar = c(3, 1, 1, 1, 0.00025, 0.4, 1.6, 0.2, 1.8, 0.4, 1.6, 0.2, 1.8), 
                mht = c(1.4, 0.8, 1, 0.3, 0.7, 0.4, 4, 2.5), 
-               rank = 0.95, iter = 10000, burnin = iter/2, thin = 5, ha = 2, 
-               detail = TRUE, data = NULL, pb = FALSE) 
+               rank = 0.95, iter = 10000, burnin = 5000, thin = 5, ha = 2, 
+               detail = TRUE, data = NULL, pb = TRUE) 
   
 ```
 

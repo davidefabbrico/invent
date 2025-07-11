@@ -629,7 +629,7 @@ ESSIntPar <- function(myres, stringName = "", type = "linear") {
 #' @export
 invParMCMC <- function(y, x, hyperpar = c(3, 1, 1, 1, 0.00025, 0.4, 1.6, 0.2, 1.8, 0.4, 1.6, 0.2, 1.8), 
                       mht = c(1.4, 0.8, 1, 0.3, 0.7, 0.4, 4, 2.5), PredOutOfSample = TRUE,
-                      rank = 0.95, iter = 10000, burnin = iter/2, thin = 5, ha = 2, 
+                      rank = 0.95, iter = 10000, burnin = 5000, thin = 5, ha = 2, 
                       data = NULL, nchain = 2, percValidationSet = 20, seed = 10,
                       onlyEff = TRUE) {
   # Check the number of cores
@@ -643,6 +643,7 @@ invParMCMC <- function(y, x, hyperpar = c(3, 1, 1, 1, 0.00025, 0.4, 1.6, 0.2, 1.
     num_to_select <- round(nobs * (percentage_to_select / 100))
     registerDoParallel(cores = cor_all)
     registerDoRNG(seed = seed)
+    p <- dim(x)[2]
     cat("Starting parallel MCMC with", cor_all, "chains, n =", nobs, "and p =", p, "...\n")
     myres <- foreach(k = 1:cor_all) %dorng% {
       if (PredOutOfSample) {

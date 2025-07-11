@@ -9,7 +9,7 @@ Description: One paragraph description of what the package does as one or more
          full sentences.
 License: MIT + file LICENSE
 Encoding: UTF-8
-Imports: Rcpp (>= 1.0.10), mltools, spikeSlabGAM, ggplot2, doParallel, gridExtra, plot3D, splines, RColorBrewer
+Imports: Rcpp (>= 1.0.10), mltools, spikeSlabGAM, ggplot2, doParallel, parallel, gridExtra, plot3D, splines, RColorBrewer
 LinkingTo: Rcpp, RcppArmadillo
 URL: https://github.com/davidefabbrico/invent
 BugReports: https://github.com/davidefabbrico/invent/issues
