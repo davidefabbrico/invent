@@ -545,8 +545,8 @@ plotEffectResponse <- function(imod, idx, type = "linear", effect = "main",
       }
     }
     # Interaction effect Linear
-    for (j in 1:(p-1)) {
-      for (k in (j+1):p) {
+    for (j in 1:(pL-1)) {
+      for (k in (j+1):pL) {
         # linear
         if (type == "linear" & effect == "interaction") {
           if (j == idx1 & k == idx2) {

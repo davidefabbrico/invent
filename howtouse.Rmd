@@ -297,6 +297,24 @@ The `mppi_plot` function creates and returns a combined MPPI plot for different 
 mppi_res <- invent::mppi_plot(out)
 ```
 
+### Association Plot and Varying Coefficients Plot
+
+#### Main Effect Association Plot
+```{r, eval=FALSE}
+plotEffectResponse(out, 1, type = "linear", effect = "main", xtitle = "x", ytitle = "y")
+```
+
+#### Interaction Effect Association Plot
+```{r, eval=FALSE}
+plotEffectResponse(out, c(1,6), type = "linear", effect = "interaction",
+                   azimut = 60, polar = 20, xtitle = "VO2max", ytitle = "age", ztitle = "BMI")
+```
+
+#### Varying Coefficients Plot
+```{r, eval=FALSE}
+plotEffectBeta(imod, 3, 21, type = "linear", xtitle = "age", ytitle = "VO2max")
+```
+
 ---
 
 ## `invParMCMC` - Parallel MCMC
@@ -349,7 +367,7 @@ The function returns a list containing:
 The function automatically checks for convergence using:
 
 1. **R-hat statistics** (Gelman-Rubin diagnostic):
-   - Values ≤ 1.1 indicate good convergence
+   - Values ≤ 1.10 indicate good convergence
    - Detailed report of problematic parameters
 
 2. **Effective Sample Size (ESS)**:
@@ -368,4 +386,13 @@ invent::invParMCMC(y = y, x = x, iter = iterations, PredOutOfSample = TRUE,
                    hyperpar = c(5, 25, 3, 1, 0.00025, 0.4, 1.6, 0.2, 1.8, 0.4, 1.6, 0.2, 1.8),
                    nchain = 3, percValidationSet = 20, data = data, onlyEff = TRUE)
 ```
+
+
+
+
+
+
+
+
+
 
