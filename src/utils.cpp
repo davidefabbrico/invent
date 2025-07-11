@@ -373,11 +373,14 @@ arma::mat initGammaStar(int p, double hyperpar) {
 // Initializes a p x p matrix with zeros and assigns values to the upper triangular part
 // The values are sampled from a gamma distribution and then inverted (1/gamma)
 arma::mat initTauStar(int p, double a, double b) {
-  arma::mat parmeter(p, p, arma::fill::zeros);
+  arma::mat parameter(p, p, arma::fill::zeros);
+  if(p < 2) {
+    return parameter;
+  }
   int n = p*(p-1)/2; 
   arma::vec gamma_samples = callrgamma(n, a, b); 
-  parmeter.elem(trimatu_ind(size(parmeter), 1)) = 1.0 / gamma_samples;
-  return parmeter;
+  parameter.elem(trimatu_ind(size(parameter), 1)) = 1.0 / gamma_samples;
+  return parameter;
 }
  
 // Initializes a vector of size p with values sampled from a gamma distribution
@@ -401,6 +404,9 @@ arma::mat initXiStar(int nlp, int q, arma::vec cd) {
 // Initializes a p x p matrix with zeros and assigns random values (+1 or -1) to the upper triangular part
 arma::mat initMStarL(int p) {
   arma::mat parameter(p, p, arma::fill::zeros); 
+  if(p < 2) {
+    return parameter;
+  }
   arma::mat rand_values = 2.0 * arma::randu<mat>(p, p) - 1.0; // Matrix with random values between -1 and 1
   parameter(arma::trimatu_ind(size(parameter), 1)) = sign(rand_values(arma::trimatu_ind(arma::size(parameter), 1)));
   return parameter;
@@ -671,6 +677,9 @@ Rcpp::List bodyMCMC(arma::vec y, int p, int nobs, arma::vec cd, arma::vec d, arm
   arma::vec eta_pl_val(n_val);
   arma::vec y_tilde(n_val);
   arma::vec vecOnesVal = ones(n_val, 1);
+  // y in sample
+  arma::vec y_inSample(nobs);
+  arma::mat Y_INSAMPLE(nout, nobs);
   // detail = false, we choose to limit the growing of the interaction chain
   // in particuar the matrix.
   arma::vec gamma_l_m(p); // main linear
@@ -1350,6 +1359,10 @@ Rcpp::List bodyMCMC(arma::vec y, int p, int nobs, arma::vec cd, arma::vec d, arm
     sigma = update_sigmaC(y, eta_pl, hyperpar2, hyperpar3, nobs);
     // log-likelihood
     double logLik =  accu(dnormLogVec(y, eta_pl, sqrt(sigma)));
+    // y in sample
+    for (int i = 0; i<nobs; i++) {
+      y_inSample(i) = generate_normal(eta_pl(i), sqrt(sigma));
+    }
     // store resutls
     if(t%thin == 0 && t > burnin-1) { // we start from 0
       if (detail == true) {
@@ -1387,6 +1400,7 @@ Rcpp::List bodyMCMC(arma::vec y, int p, int nobs, arma::vec cd, arma::vec d, arm
         THETA_nl.row(idx) = theta_nl.t();
         ALPHA_l[idx] = alpha_l;
         ALPHA_nl[idx] = alpha_nl;
+        Y_INSAMPLE.row(idx) = y_inSample.t();
       } else {
         LOGLIKELIHOOD(idx) = logLik;
         SIGMA(idx) = sigma;
@@ -1505,6 +1519,7 @@ Rcpp::List bodyMCMC(arma::vec y, int p, int nobs, arma::vec cd, arma::vec d, arm
                         Named("LogLikelihood") = LOGLIKELIHOOD,
                         Named("acc_rate") = acc_list,
                         Named("y_oos") = Y_TILDE,
+                        Named("y_inSamp") = Y_INSAMPLE,
                         Named("Execution_Time") = duration/1000000
     );
   } else {

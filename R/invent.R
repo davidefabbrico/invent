@@ -31,4 +31,5 @@
 #' @import doParallel
 #' @import plot3D
 #' @import splines
+#' @import RColorBrewer
 NULL

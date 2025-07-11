@@ -330,7 +330,7 @@ my_indices_int <- function(est, truth, linear = TRUE, d, omega_nl){
 #' @export
 plot_mppi <- function(df, title) {
   # automatic step for the x-axis
-  step <- floor(dim(df)[1]*0.20)
+  step <- ceiling(dim(df)[1]*0.20)
   selected_labels <- seq(from = 0, to = nrow(df), by = step)
   selected_labels[1] <- 1
   
@@ -642,7 +642,12 @@ plotEffectResponse <- function(imod, idx, type = "linear", effect = "main",
       all(dim(z_up) == c(nx, ny))
     )
     grid <- mesh(xo, yo)
-    gray_palette <- colorRampPalette(c("#F0F0F0", "#303030"))(100)
+    # Okabe-Ito
+    okabe_ito_continuous <- colorRampPalette(c("#F0E442", "#E69F00", 
+                                               "#009E73", "#D55E00", 
+                                               "#CC79A7", "#0072B2", 
+                                               "#999999", "#000000"))
+    col_palette <- okabe_ito_continuous(100)
     grid_color <- "grey90"
     par(mar = c(2, 2, 2, 2),
         cex.axis = 0.8,     
@@ -651,7 +656,7 @@ plotEffectResponse <- function(imod, idx, type = "linear", effect = "main",
       x = grid$x, 
       y = grid$y,
       z = z_median,
-      col = gray_palette,
+      col = col_palette,
       colkey = FALSE, 
       lighting = list(ambient = 0.3, diffuse = 0.7, specular = 0.4),
       shade = 0.1,

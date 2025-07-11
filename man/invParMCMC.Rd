@@ -18,7 +18,8 @@ invParMCMC(
   data = NULL,
   nchain = 2,
   percValidationSet = 20,
-  seed = 10
+  seed = 10,
+  onlyEff = TRUE
 )
 }
 \description{
