@@ -57,10 +57,28 @@ my_cm <- function(sel, true) {
 #' @export
 
 ##### ------------------------------------------------------------------ ######
-invMCMC <- function(y, x, y_val = NULL, x_val = NULL, hyperpar = c(3, 1, 1, 1, 0.00025, 0.4, 1.6, 0.2, 1.8, 0.4, 1.6, 0.2, 1.8), 
+invMCMC <- function(y, x, y_val = NULL, x_val = NULL, hyperpar = NULL, 
                     mht = c(1.4, 0.8, 1, 0.3, 0.7, 0.4, 4, 2.5), 
                     rank = 0.95, iter = 10000, burnin = iter/2, thin = 5, ha = 2, 
-                    detail = FALSE, data = NULL, pb = TRUE) {
+                    detail = FALSE, data = NULL, pb = TRUE, family = "gaussian",
+                    perm = NULL, nod = NULL) {
+  
+  # Permutation
+  if (is.null(perm)) {
+    perm <- 1:ncol(x)
+  }
+  
+  # knots
+  if (is.null(nod)) {
+    nod <- min(nobs, 20)
+  }
+  
+  # HYPERPARAMETERS
+  if (is.null(hyperpar) & family == "gaussian") {
+    hyperpar <- c(3, 1, 1, 1, 0.00025, 0.4, 1.6, 0.2, 1.8, 0.4, 1.6, 0.2, 1.8)
+  } else if (is.null(hyperpar) & family == "binomial") {
+    hyperpar <- c(3, 1, 0.00025, 0.4, 1.6, 0.2, 1.8, 0.4, 1.6, 0.2, 1.8)
+  }
   
   result <- NULL
   # useful quantities
@@ -86,7 +104,7 @@ invMCMC <- function(y, x, y_val = NULL, x_val = NULL, hyperpar = c(3, 1, 1, 1, 0
       X <- cbind(X, xj)
       xjl <- lin(xj)
       X_lin <- cbind(X_lin, xjl)
-      xjtilde <- sm(x = xj, rankZ = rank) 
+      xjtilde <- sm(x = xj, rankZ = rank, K = nod) 
       X_nlin <- cbind(X_nlin, xjtilde)
       d[inD] <- dim(xjtilde)[2]
       inD <- inD + 1
@@ -123,10 +141,17 @@ invMCMC <- function(y, x, y_val = NULL, x_val = NULL, hyperpar = c(3, 1, 1, 1, 0
   # given that I apply the function lin, the columns are not in the right order
   
   # Call the C++ function
-  result = bodyMCMC(as.vector(y), as.integer(p), as.integer(nobs), as.vector(cd),
-                    as.vector(d), as.matrix(X_l), as.matrix(X_nl), as.matrix(X_val_l), as.matrix(X_val_nl),
-                    as.vector(hyperpar), as.vector(mht), as.integer(n_cat), as.integer(iter), 
-                    as.integer(burnin), as.integer(thin), ha, as.logical(detail), as.logical(pb))
+  if (family == "gaussian") {
+    result = bodyMCMC(as.vector(y), as.integer(p), as.integer(nobs), as.vector(cd),
+                      as.vector(d), as.matrix(X_l), as.matrix(X_nl), as.matrix(X_val_l), as.matrix(X_val_nl),
+                      as.vector(hyperpar), as.vector(mht), as.integer(n_cat), as.integer(iter), 
+                      as.integer(burnin), as.integer(thin), as.integer(ha), as.logical(detail), as.logical(pb))
+  } else if (family == "binomial") {
+    result = bodyMCMC_binary(as.vector(y), as.integer(p), as.integer(nobs), as.vector(cd),
+                               as.vector(d), as.matrix(X_l), as.matrix(X_nl), as.matrix(X_val_l), as.matrix(X_val_nl),
+                               as.vector(hyperpar), as.vector(mht), as.integer(n_cat), as.integer(iter), 
+                               as.integer(burnin), as.integer(thin), as.integer(ha), as.logical(detail), as.logical(pb))
+  }
   
   nlp <- p - n_cat
   nout <- (iter-burnin)/thin
@@ -154,8 +179,12 @@ invMCMC <- function(y, x, y_val = NULL, x_val = NULL, hyperpar = c(3, 1, 1, 1, 0
     mppi_MainNonLinear <- result$gamma_nl
     yhat <- result$linear_predictor
   }
-  # mean square error
-  mse_is <- mse(yhat, y)
+  if (family == "gaussian") {
+    # mean square error
+    mse_is <- mse(yhat, y)
+  } else if (family == "binomial") {
+    acc_is <- mean(ifelse(yhat > 0.5, 1, 0) == y)
+  }
   # log-likelihood
   ll <- result$LogLikelihood
   # prediction
@@ -166,80 +195,107 @@ invMCMC <- function(y, x, y_val = NULL, x_val = NULL, hyperpar = c(3, 1, 1, 1, 0
     } else {
       y_tilde <- result$y_oos
     }
-    mse_os <- mse(y_tilde, y_val)
+    if (family == "gaussian") {
+      mse_os <- mse(y_tilde, y_val)
+    } else if (family == "binomial") {
+      acc_os <- mean(ifelse(y_tilde > 0.5, 1, 0) == y_val)
+    }
   } else {
     lp_os <- NULL
     y_tilde <- NULL
     mse_os <- NULL
+    acc_os <- NULL
   }
+  
   if (!is.null(data)) {
+    d_data <- data$d
+    cd_data <- c(0, cumsum(data$d))
+    ######################################################
     ############### Linear main effect ###################
+    ######################################################
     # selected by the model
     sel_MainLinear <- as.numeric(mppi_MainLinear > 0.5)
     # true non null effect
-    true_MainLinear <- as.numeric(data$theta_l[1,] != 0)
+    true_MainLinear <- as.numeric(data$theta_l[1, perm] != 0)
     # table linear main effect
     tab_MainLinear <- my_cm(sel_MainLinear, true_MainLinear)
     matt_MainLinear <- mcc(confusionM = tab_MainLinear)
-    tpr_MainLinear <- tab_MainLinear[2,2]/sum(tab_MainLinear[,2]) 
-    fpr_MainLinear <- tab_MainLinear[2,1]/sum(tab_MainLinear[,1])
+    tpr_MainLinear <- ifelse(sum(tab_MainLinear[,2]) == 0, 0, tab_MainLinear[2,2]/sum(tab_MainLinear[,2]))
+    fpr_MainLinear <- ifelse(sum(tab_MainLinear[,1]) == 0, 0, tab_MainLinear[2,1]/sum(tab_MainLinear[,1]))
+    ########################################################## 
     ############### Non linear main effect ###################
+    ##########################################################
     # selected by the model
     sel_MainNonLinear <- as.numeric(mppi_MainNonLinear > 0.5)
     # true non null effect
-    true_MainNonLinear <- as.numeric(data$theta_nl[1,] != 0)
+    true_MainNonLinear <- as.numeric(data$theta_nl[1, perm] != 0)
     # table linear main effect
     tab_MainNonLinear <- my_cm(sel_MainNonLinear, true_MainNonLinear)
     matt_MainNonLinear <- mcc(confusionM = tab_MainNonLinear)
-    if (sum(tab_MainNonLinear[,2]) == 0) {
-      tpr_MainNonLinear <- 0
-    } else {
-      tpr_MainNonLinear <- tab_MainNonLinear[2,2]/sum(tab_MainNonLinear[,2]) 
-    }
-    if (sum(tab_MainNonLinear[,1]) == 0) {
-      fpr_MainNonLinear <- 0
-    } else {
-      fpr_MainNonLinear <- tab_MainNonLinear[2,1]/sum(tab_MainNonLinear[,1])
-    }
+    tpr_MainNonLinear <- ifelse(sum(tab_MainNonLinear[,2]) == 0, 0, tab_MainNonLinear[2,2]/sum(tab_MainNonLinear[,2]))
+    fpr_MainNonLinear <- ifelse(sum(tab_MainNonLinear[,1]) == 0, 0, tab_MainNonLinear[2,1]/sum(tab_MainNonLinear[,1]))
+    #############################################################
     ############### Linear Interaction effect ###################
+    #############################################################
     sel_IntLinear <- mppi_IntLinear > 0.5
     sel_IntLinear[sel_IntLinear == TRUE] = 1
+    # omega_l_perm <- data$omega_l[perm, perm]
+    # true_IntLinear <- omega_l_perm != 0
     true_IntLinear <- data$omega_l != 0
-    true_IntLinear[true_IntLinear == TRUE] = 1
+    true_IntLinear[true_IntLinear == TRUE] <- 1
+    true_IntLinear_perm <- true_IntLinear[perm, perm]
+    # the matrix needs to be symmetric
+    true_IntLinear_perm <- (true_IntLinear_perm + t(true_IntLinear_perm)) > 0
+    Vec_true_IntLinear <- true_IntLinear_perm[upper.tri(true_IntLinear_perm)]
+    # Vec_true_IntLinear <- true_IntLinear[upper.tri(true_IntLinear)]
     Vec_sel_IntLinear <- sel_IntLinear[upper.tri(sel_IntLinear)]
-    Vec_true_IntLinear <- true_IntLinear[upper.tri(true_IntLinear)]
     tab_IntLinear <- my_cm(Vec_sel_IntLinear, Vec_true_IntLinear)
     matt_IntLinear <- mcc(confusionM = tab_IntLinear)
-    tpr_IntLinear <- tab_IntLinear[2,2]/sum(tab_IntLinear[,2]) 
-    fpr_IntLinear <- tab_IntLinear[2,1]/sum(tab_IntLinear[,1])
+    tpr_IntLinear <- ifelse(sum(tab_IntLinear[,2]) == 0, 0, tab_IntLinear[2,2]/sum(tab_IntLinear[,2]))
+    fpr_IntLinear <- ifelse(sum(tab_IntLinear[,1]) == 0, 0, tab_IntLinear[2,1]/sum(tab_IntLinear[,1]))
+    #################################################################
     ############### Non linear Interaction effect ###################
+    #################################################################
     sel_IntNonLinear <- mppi_IntNonLinear > 0.5
     sel_IntNonLinear[sel_IntNonLinear == TRUE] = 1
     TData <- data$omega_nl
     true_IntNonLinear <- matrix(0, nrow = p, ncol = p)
     for (i in 1:(p-1)) {
       for (j in (i+1):p) {
-        if (sum(TData[i, (cd[j]+1):(cd[j+1])]) != 0) {
+        if (sum(TData[i, (cd_data[j]+1):(cd_data[j+1])]) != 0) {
           true_IntNonLinear[i,j] <- 1
         }
       } 
     }
+    true_IntNonLinear_perm <- true_IntNonLinear[perm, perm]
+    true_IntNonLinear_perm <- (true_IntNonLinear_perm + t(true_IntNonLinear_perm)) > 0
+    Vec_true_IntNonLinear <- true_IntNonLinear_perm[upper.tri(true_IntNonLinear_perm)]
+    
     Vec_sel_IntNonLinear <- sel_IntNonLinear[upper.tri(sel_IntNonLinear)]
-    Vec_true_IntNonLinear <- true_IntNonLinear[upper.tri(true_IntNonLinear)]
     tab_IntNonLinear <- my_cm(Vec_sel_IntNonLinear, Vec_true_IntNonLinear)
     matt_IntNonLinear <- mcc(confusionM = tab_IntNonLinear)
-    tpr_IntNonLinear <- tab_IntNonLinear[2,2]/sum(tab_IntNonLinear[,2]) 
-    fpr_IntNonLinear <- tab_IntNonLinear[2,1]/sum(tab_IntNonLinear[,1])
+    tpr_IntNonLinear <- ifelse(sum(tab_IntNonLinear[,2]) == 0, 0, tab_IntNonLinear[2,2]/sum(tab_IntNonLinear[,2]))
+    fpr_IntNonLinear <- ifelse(sum(tab_IntNonLinear[,1]) == 0, 0, tab_IntNonLinear[2,1]/sum(tab_IntNonLinear[,1]))
     # Total metric
     selectInd <- c(as.numeric(sel_MainLinear), as.numeric(sel_MainNonLinear), 
                    Vec_sel_IntLinear , Vec_sel_IntNonLinear)
     trueInd <- c(as.numeric(true_MainLinear), as.numeric(true_MainNonLinear), 
                  Vec_true_IntLinear, Vec_true_IntNonLinear)
+    # --- warning for degenerate classes ---
+    if (all(trueInd == 0)) {
+      warning("truth contains only 0: no true positives. TPR and MCC may be undefined.", call. = FALSE)
+    } else if (all(trueInd == 1)) {
+      warning("truth contains only 1: no true negatives. FPR and MCC may be undefined.", call. = FALSE)
+    }
     ##########  aggregate
+    # TN FN
+    # FP TP
+    # TPR = TP / TP + FN
+    # FPR = FP / FP + TN
     contTable <- my_cm(selectInd, trueInd)
     matt <- mcc(confusionM = contTable)
-    tpr <- contTable[2,2]/sum(contTable[,2]) 
-    fpr <- contTable[2,1]/sum(contTable[,1]) 
+    tpr <- ifelse(sum(contTable[,2]) == 0, 0, contTable[2,2]/sum(contTable[,2]))
+    fpr <- ifelse(sum(contTable[,1]) == 0, 0, contTable[2,1]/sum(contTable[,1]))
   }
   # execution time
   execution_time <- result$Execution_Time
@@ -257,31 +313,64 @@ invMCMC <- function(y, x, y_val = NULL, x_val = NULL, hyperpar = c(3, 1, 1, 1, 0
       # if there is no data generating mechanism
       if (!is.null(y_val)) {
         # if there is the posterior predictive distribution
-        res <- list(linear_predictor = yhat, y_OutSample = y_tilde, LogLikelihood = ll, y_tildeChain = y_tComplete,
-                    mse_inSample = mse_is, mse_outSample = mse_os, mppi_MainLinear = mppi_MainLinear, 
-                    mppi_MainNonLinear = mppi_MainNonLinear, mppi_IntLinear = mppi_IntLinear, 
-                    mppi_IntNonLinear = mppi_IntNonLinear, Execution_Time = execution_time, acc_rate = acc_rate, sigma = sigma)
+        if (family == "gaussian") {
+          res <- list(linear_predictor = yhat, y_OutSample = y_tilde, LogLikelihood = ll, y_tildeChain = y_tComplete,
+                      mse_inSample = mse_is, mse_outSample = mse_os, mppi_MainLinear = mppi_MainLinear, 
+                      mppi_MainNonLinear = mppi_MainNonLinear, mppi_IntLinear = mppi_IntLinear, 
+                      mppi_IntNonLinear = mppi_IntNonLinear, Execution_Time = execution_time, acc_rate = acc_rate, sigma = sigma)
+        } else if (family == "binomial") {
+          res <- list(linear_predictor = yhat, y_OutSample = y_tilde, LogLikelihood = ll, y_tildeChain = y_tComplete,
+                      acc_inSample = acc_is, acc_outSample = acc_os, mppi_MainLinear = mppi_MainLinear, 
+                      mppi_MainNonLinear = mppi_MainNonLinear, mppi_IntLinear = mppi_IntLinear, 
+                      mppi_IntNonLinear = mppi_IntNonLinear, Execution_Time = execution_time, acc_rate = acc_rate)
+        }
       } else {
-        res <- list(linear_predictor = yhat, LogLikelihood = ll, 
-                    mse = mse_is, mppi_MainLinear = mppi_MainLinear, 
-                    mppi_MainNonLinear = mppi_MainNonLinear, mppi_IntLinear = mppi_IntLinear, 
-                    mppi_IntNonLinear = mppi_IntNonLinear, Execution_Time = execution_time, acc_rate = acc_rate, sigma = sigma)
+        if (family == "gaussian") {
+          res <- list(linear_predictor = yhat, LogLikelihood = ll, 
+                      mse = mse_is, mppi_MainLinear = mppi_MainLinear, 
+                      mppi_MainNonLinear = mppi_MainNonLinear, mppi_IntLinear = mppi_IntLinear, 
+                      mppi_IntNonLinear = mppi_IntNonLinear, Execution_Time = execution_time, acc_rate = acc_rate, sigma = sigma) 
+        } else if (family == "binomial") {
+          res <- list(linear_predictor = yhat, LogLikelihood = ll, 
+                      acc = acc_is, mppi_MainLinear = mppi_MainLinear, 
+                      mppi_MainNonLinear = mppi_MainNonLinear, mppi_IntLinear = mppi_IntLinear, 
+                      mppi_IntNonLinear = mppi_IntNonLinear, Execution_Time = execution_time, acc_rate = acc_rate)
+        }
       }
     } else {
       if (!is.null(y_val)) {
         # return tpr, fpr, matt
-        res <- list(linear_predictor = yhat, y_OutSample = y_tilde, y_tildeChain = y_tComplete,
-                    LogLikelihood = ll, mse_inSample = mse_is, 
-                    mse_outSample = mse_os, tpr = tpr, tprML = tpr_MainLinear, tprMNL = tpr_MainNonLinear, tprIL = tpr_IntLinear, tprINL = tpr_IntNonLinear, fpr = fpr,
-                    fprML = fpr_MainLinear, fprMNL = fpr_MainNonLinear, fprIL = fpr_IntLinear, fprINL = fpr_IntNonLinear,
-                    matt = matt, mattML = matt_MainLinear, mattMNL = matt_MainNonLinear, mattIL = matt_IntLinear, mattINL = matt_IntNonLinear,
-                    Execution_Time = execution_time, acc_rate = acc_rate, sigma = sigma)
+        if (family == "gaussian") {
+          res <- list(linear_predictor = yhat, y_OutSample = y_tilde, y_tildeChain = y_tComplete,
+                      LogLikelihood = ll, mse_inSample = mse_is, 
+                      mse_outSample = mse_os, tpr = tpr, tprML = tpr_MainLinear, tprMNL = tpr_MainNonLinear, tprIL = tpr_IntLinear, tprINL = tpr_IntNonLinear, fpr = fpr,
+                      fprML = fpr_MainLinear, fprMNL = fpr_MainNonLinear, fprIL = fpr_IntLinear, fprINL = fpr_IntNonLinear,
+                      matt = matt, mattML = matt_MainLinear, mattMNL = matt_MainNonLinear, mattIL = matt_IntLinear, mattINL = matt_IntNonLinear,
+                      Execution_Time = execution_time, acc_rate = acc_rate, sigma = sigma)
+        } else if (family == "binomial") {
+          res <- list(linear_predictor = yhat, y_OutSample = y_tilde, y_tildeChain = y_tComplete,
+                      LogLikelihood = ll, acc_inSample = acc_is, 
+                      acc_outSample = acc_os, tpr = tpr, tprML = tpr_MainLinear, tprMNL = tpr_MainNonLinear, tprIL = tpr_IntLinear, tprINL = tpr_IntNonLinear, fpr = fpr,
+                      fprML = fpr_MainLinear, fprMNL = fpr_MainNonLinear, fprIL = fpr_IntLinear, fprINL = fpr_IntNonLinear,
+                      matt = matt, mattML = matt_MainLinear, mattMNL = matt_MainNonLinear, mattIL = matt_IntLinear, mattINL = matt_IntNonLinear,
+                      Execution_Time = execution_time, acc_rate = acc_rate)
+        }
       } else {
         # return tpr, fpr, matt
-        res <- list(linear_predictor = yhat, 
-                    LogLikelihood = ll, mse = mse_is, tpr = tpr, tprML = tpr_MainLinear, tprMNL = tpr_MainNonLinear, tprIL = tpr_IntLinear, tprINL = tpr_IntNonLinear, fpr = fpr,
-                    fprML = fpr_MainLinear, fprMNL = fpr_MainNonLinear, fprIL = fpr_IntLinear, fprINL = fpr_IntNonLinear,
-                    matt = matt, mattML = matt_MainLinear, mattMNL = matt_MainNonLinear, mattIL = matt_IntLinear, mattINL = matt_IntNonLinear, Execution_Time = execution_time, acc_rate = acc_rate, sigma = sigma)
+        if (family == "gaussian") {
+          res <- list(linear_predictor = yhat, 
+                      LogLikelihood = ll, mse = mse_is, tpr = tpr, tprML = tpr_MainLinear, tprMNL = tpr_MainNonLinear, tprIL = tpr_IntLinear, tprINL = tpr_IntNonLinear, fpr = fpr,
+                      fprML = fpr_MainLinear, fprMNL = fpr_MainNonLinear, fprIL = fpr_IntLinear, fprINL = fpr_IntNonLinear,
+                      matt = matt, mattML = matt_MainLinear, mattMNL = matt_MainNonLinear, mattIL = matt_IntLinear, 
+                      mattINL = matt_IntNonLinear, Execution_Time = execution_time, acc_rate = acc_rate, sigma = sigma)
+        } else if (family == "binomial") {
+          res <- list(linear_predictor = yhat, 
+                      LogLikelihood = ll, acc = acc_is, tpr = tpr, tprML = tpr_MainLinear, tprMNL = tpr_MainNonLinear, tprIL = tpr_IntLinear, 
+                      tprINL = tpr_IntNonLinear, fpr = fpr,
+                      fprML = fpr_MainLinear, fprMNL = fpr_MainNonLinear, fprIL = fpr_IntLinear, fprINL = fpr_IntNonLinear,
+                      matt = matt, mattML = matt_MainLinear, mattMNL = matt_MainNonLinear, mattIL = matt_IntLinear, 
+                      mattINL = matt_IntNonLinear, Execution_Time = execution_time, acc_rate = acc_rate)
+        }
       }
     }
   }

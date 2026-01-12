@@ -47,8 +47,9 @@
 #   \item betanl - vector that concatenates batch of coefficients for nonlinear terms (d*1 x 1)
 # }
 #' @export
-gendata <- function(n_obs = 200, p = 10, minb = 1.5, maxb = 3.0, error = 0.01, 
-                    scenario = 4, nnnc = 3, noi = 3, ha = 2) {
+gendata <- function(n_obs = 200, p = 10, minb = 1.5, maxb = 3.0, rank = NULL, error = 0.01, 
+                    scenario = 4, nnnc = 3, noi = 3, ha = 2, family = "gaussian",
+                    nod = NULL) {
   # ha = 2, strong heredity assumption
   # ha = 1, weak heredity assumption
   # ha = 0, no assumption
@@ -61,12 +62,22 @@ gendata <- function(n_obs = 200, p = 10, minb = 1.5, maxb = 3.0, error = 0.01,
   X_nl <- vector()
   d <- vector()
   
+  # setup spline
+  if (is.null(rank)) {
+    rank <- 0.95
+  }
+  
+  # knots
+  if (is.null(nod)) {
+    nod <- min(n_obs, 20)
+  }
+
   for(j in 1:p) {
     xj <- rnorm(n_obs, 0, 1)
     X <- cbind(X, xj)
     xjl <- lin(xj)
     X_l <- cbind(X_l, xjl)
-    xjtilde <- sm(x = xj, rankZ = .95) 
+    xjtilde <- sm(x = xj, rankZ = rank) 
     X_nl <- cbind(X_nl, xjtilde)
     d[j] <- dim(xjtilde)[2]
   }
@@ -198,12 +209,6 @@ gendata <- function(n_obs = 200, p = 10, minb = 1.5, maxb = 3.0, error = 0.01,
     }
   }
   
-  # inizialize xi linear and xi non linear
-  # xi_l <- sample(c(-1, 1), p, replace = TRUE)
-  # xi_tilde <- c()
-  # for (i in 1:p) {
-  #   xi_tilde <- c(xi_tilde, rep(xi_l[i], d[i]))
-  # }
   m_l <- sample(c(-1, 1), size = p, replace = TRUE, prob = c(0.5, 0.5))
   m_nl <- sample(c(-1, 1), size = q, replace = TRUE, prob = c(0.5, 0.5))
   xi_l <- rnorm(p, m_l, 1)
@@ -222,32 +227,67 @@ gendata <- function(n_obs = 200, p = 10, minb = 1.5, maxb = 3.0, error = 0.01,
     }
   }
   
-  eta0 <- rep(runif(1, 1, 2)*sign(runif(1, -1, 1)), n_obs) #intercept
-  epsilon <- rnorm(n_obs, 0, error) #error term
-  
-  Y <- rep(0, n_obs)
-  for (i in 1:n_obs) {
-    for (j in 1:p) {
-      Y[i] <- Y[i] + X_l[i,j]*beta_l[i,j] + X_nl[i,(cd[j]+1):(cd[j+1])]%*%beta_nl[i,(cd[j]+1):(cd[j+1])]
+  if (family == "gaussian") {
+    eta0 <- rep(runif(1, 1, 2)*sign(runif(1, -1, 1)), n_obs) # intercept
+    epsilon <- rnorm(n_obs, 0, error) # error term
+    
+    Y <- rep(0, n_obs)
+    for (i in 1:n_obs) {
+      for (j in 1:p) {
+        Y[i] <- Y[i] + X_l[i,j]*beta_l[i,j] + X_nl[i,(cd[j]+1):(cd[j+1])]%*%beta_nl[i,(cd[j]+1):(cd[j+1])]
+      }
+      Y[i] <- eta0[i] + Y[i] + epsilon[i]
     }
-    Y[i] <- eta0[i] + Y[i] + epsilon[i]
+    
+    return(list(
+      Y = Y,
+      X = X, 
+      X_l = X_l, 
+      X_nl = X_nl, 
+      d = d, 
+      intcpt = eta0[1],
+      beta_l = beta_l, 
+      beta_nl = beta_nl,
+      theta_l = theta_l,
+      theta_nl = theta_nl,
+      alpha_l = alpha_l,
+      alpha_nl = alpha_nl,
+      omega_l = omega_l,
+      omega_nl = omega_nl))
+    
+  } else if (family == "binomial") {
+    eta0 <- rep(runif(1, 0.1, 0.5)*sign(runif(1, -1, 1)), n_obs)
+    eta <- rep(0, n_obs)
+    for (i in 1:n_obs) {
+      for (j in 1:p) {
+        eta[i] <- eta[i] + X_l[i,j]*beta_l[i,j] + X_nl[i,(cd[j]+1):(cd[j+1])]%*%beta_nl[i,(cd[j]+1):(cd[j+1])]
+      }
+      eta[i] <- eta0[i] + eta[i]
+    }
+    probs <- pnorm(eta) 
+    epsilon <- rnorm(n_obs, 0, 1) 
+    Z <- eta + epsilon 
+    Y <- ifelse(Z > 0, 1, 0)
+    
+    return(list(
+      Y = Y,        
+      Z = Z,        
+      probs = probs,
+      X = X, 
+      X_l = X_l, 
+      X_nl = X_nl, 
+      d = d, 
+      intcpt = eta0[1],
+      beta_l = beta_l, 
+      beta_nl = beta_nl,
+      theta_l = theta_l,
+      theta_nl = theta_nl,
+      alpha_l = alpha_l,
+      alpha_nl = alpha_nl,
+      omega_l = omega_l,
+      omega_nl = omega_nl))
+    
   }
-
-  return(list(
-    Y = Y,
-    X = X, 
-    X_l = X_l, 
-    X_nl = X_nl, 
-    d = d, 
-    intcpt = eta0[1],
-    beta_l = beta_l, 
-    beta_nl = beta_nl,
-    theta_l = theta_l,
-    theta_nl = theta_nl,
-    alpha_l = alpha_l,
-    alpha_nl = alpha_nl,
-    omega_l = omega_l,
-    omega_nl = omega_nl))
 } # closes function genmech
 
 #' my_indicies
