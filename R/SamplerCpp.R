@@ -70,7 +70,7 @@ invMCMC <- function(y, x, y_val = NULL, x_val = NULL, hyperpar = NULL,
   
   # knots
   if (is.null(nod)) {
-    nod <- min(nobs, 20)
+    nod <- min(nrow(x), 20)
   }
   
   # HYPERPARAMETERS
@@ -346,7 +346,8 @@ invMCMC <- function(y, x, y_val = NULL, x_val = NULL, hyperpar = NULL,
                       mse_outSample = mse_os, tpr = tpr, tprML = tpr_MainLinear, tprMNL = tpr_MainNonLinear, tprIL = tpr_IntLinear, tprINL = tpr_IntNonLinear, fpr = fpr,
                       fprML = fpr_MainLinear, fprMNL = fpr_MainNonLinear, fprIL = fpr_IntLinear, fprINL = fpr_IntNonLinear,
                       matt = matt, mattML = matt_MainLinear, mattMNL = matt_MainNonLinear, mattIL = matt_IntLinear, mattINL = matt_IntNonLinear,
-                      Execution_Time = execution_time, acc_rate = acc_rate, sigma = sigma)
+                      Execution_Time = execution_time, acc_rate = acc_rate, sigma = sigma,
+                      X_nl = X_nlin)
         } else if (family == "binomial") {
           res <- list(linear_predictor = yhat, y_OutSample = y_tilde, y_tildeChain = y_tComplete,
                       LogLikelihood = ll, acc_inSample = acc_is, 

@@ -452,7 +452,7 @@ mppi_plot <- function(resultMCMC) {
 #' @export
 plotEffectResponse <- function(imod, idx, type = "linear", effect = "main",
                                xtitle = "", ytitle = "", ztitle = "", 
-                               azimut = 30, polar = 20) {
+                               azimut = 30, polar = 20, font_size = 16) {
   X_l <- imod$X_lin
   X_nl <- imod$X_nl
   ngf <- dim(X_nl)[1]
@@ -646,7 +646,7 @@ plotEffectResponse <- function(imod, idx, type = "linear", effect = "main",
       ) +
       ylab(ytitle) + 
       xlab(xtitle) + 
-      theme_minimal() +
+      theme_minimal(base_size = font_size) +
       theme(
         panel.grid.major = element_line(color = "grey90"),
         panel.grid.minor = element_blank()
@@ -759,7 +759,7 @@ plotEffectResponse <- function(imod, idx, type = "linear", effect = "main",
 # Covariate effect on Beta regression coefficient (Linear/Non-Linear)
 #' @export
 plotEffectBeta <- function(imod, idx, modifier, type = "linear",
-                           xtitle = "", ytitle = "") {
+                           xtitle = "", ytitle = "", font_size = 16) {
   X_l <- imod$X_lin
   X_nl <- imod$X_nl
   ngf <- dim(X_nl)[1]
@@ -846,7 +846,7 @@ plotEffectBeta <- function(imod, idx, modifier, type = "linear",
     ) +
     ylab(ytitle) + 
     xlab(xtitle) + 
-    theme_minimal() +
+    theme_minimal(base_size = font_size) +
     theme(
       panel.grid.major = element_line(color = "grey90"),
       panel.grid.minor = element_blank()
